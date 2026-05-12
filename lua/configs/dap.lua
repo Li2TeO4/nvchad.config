@@ -1,0 +1,278 @@
+-- ~/.config/nvim/lua/configs/dap.lua
+
+local dap = require("dap")
+local mason_path = vim.fn.stdpath("data") .. "/mason/packages"
+
+-- ─────────────────────────────────────────────
+--  C / C++ 适配器（codelldb）
+-- ─────────────────────────────────────────────
+local codelldb_path = mason_path .. "/codelldb/extension/adapter/codelldb"
+
+dap.adapters.codelldb = {
+  type = "server",
+  port = "${port}",
+  executable = {
+    command = codelldb_path,
+    args    = { "--port", "${port}" },
+  },
+}
+
+-- ─────────────────────────────────────────────
+--  在 build 目录中找可执行文件
+-- ─────────────────────────────────────────────
+local function pick_executable(build_dir)
+  local files = vim.fn.glob(build_dir .. "/*", false, true)
+  local execs = {}
+  for _, f in ipairs(files) do
+    if vim.fn.isdirectory(f) == 0 and vim.fn.executable(f) == 1 then
+      table.insert(execs, f)
+    end
+  end
+  if #execs == 0 then return nil
+  elseif #execs == 1 then return execs[1]
+  else
+    local idx = vim.fn.inputlist(execs)
+    if idx <= 0 or idx > #execs then return nil end
+    return execs[idx]
+  end
+end
+
+-- ─────────────────────────────────────────────
+--  C / C++ 调试配置
+-- ─────────────────────────────────────────────
+dap.configurations.c = {
+  {
+    name    = "Launch (手动输入可执行文件)",
+    type    = "codelldb",
+    request = "launch",
+    program = function()
+      return vim.fn.input("可执行文件路径: ", vim.fn.getcwd() .. "/bin/", "file")
+    end,
+    cwd         = "${workspaceFolder}",
+    stopOnEntry = false,
+    args        = {},
+    -- 【修复terminal】改用 console = "internalConsole"：
+    --   程序 stdout/stderr → DAP 底部 console 面板，自动显示，无需手动跳入
+    --   缺点：scanf/fgets 等交互式输入不可用（输入会卡住）
+    --   如果程序需要 scanf 交互，改回 "integratedTerminal" 并手动切到 terminal buffer 输入
+    console     = "internalConsole",
+  },
+  {
+    name    = "Launch (CMake Debug build，自动查找)",
+    type    = "codelldb",
+    request = "launch",
+    program = function()
+      local cwd = vim.fn.getcwd()
+      local candidates = {
+        -- bin/ 优先（用户习惯放这里）
+        cwd .. "/bin",
+        cwd .. "/bin/Debug",
+        cwd .. "/bin/debug",
+        -- 标准 CMake build 目录
+        cwd .. "/build/Debug",
+        cwd .. "/build/debug",
+        cwd .. "/build",
+        cwd .. "/build/bin",
+      }
+      local exec
+      for _, dir in ipairs(candidates) do
+        if vim.fn.isdirectory(dir) == 1 then
+          exec = pick_executable(dir)
+          if exec then break end
+        end
+      end
+      if not exec then
+        vim.notify("未在 bin/ 或 build/ 下找到可执行文件", vim.log.levels.WARN)
+        exec = vim.fn.input("可执行文件路径: ", cwd .. "/bin/", "file")
+        if exec == "" then return require("dap").ABORT end
+      end
+      return exec
+    end,
+    cwd         = "${workspaceFolder}",
+    stopOnEntry = false,
+    args = function()
+      local s = vim.fn.input("程序参数（无则直接回车）: ")
+      if s == "" then return {} end
+      return vim.split(s, "%s+", { trimempty = true })
+    end,
+    console     = "internalConsole",
+  },
+  {
+    -- 【为有 scanf 的程序单独提供的配置】
+    -- integratedTerminal 可以交互，但 stdout 在后台 terminal buffer，
+    -- 需要 <C-w>j 或 <leader>dt 跳过去，然后 i 进入输入模式才能看到/输入内容
+    name    = "Launch (integratedTerminal，有 scanf 的程序)",
+    type    = "codelldb",
+    request = "launch",
+    program = function()
+      return vim.fn.input("可执行文件路径: ", vim.fn.getcwd() .. "/bin/", "file")
+    end,
+    cwd         = "${workspaceFolder}",
+    stopOnEntry = false,
+    args        = {},
+    console     = "integratedTerminal",
+  },
+  {
+    name    = "Attach to process",
+    type    = "codelldb",
+    request = "attach",
+    pid     = require("dap.utils").pick_process,
+    args    = {},
+  },
+}
+
+dap.configurations.cpp = dap.configurations.c
+
+-- ─────────────────────────────────────────────
+--  Python 适配器（debugpy）
+-- ─────────────────────────────────────────────
+local debugpy_path = mason_path .. "/debugpy/venv/bin/python"
+
+dap.adapters.python = function(cb, config)
+  if config.request == "attach" then
+    local port = (config.connect or config).port
+    local host = (config.connect or config).host or "127.0.0.1"
+    cb({ type = "server", port = assert(port), host = host, options = { source_filetype = "python" } })
+  else
+    cb({ type = "executable", command = debugpy_path, args = { "-m", "debugpy.adapter" }, options = { source_filetype = "python" } })
+  end
+end
+
+dap.configurations.python = {
+  {
+    name    = "Launch (当前文件)",
+    type    = "python",
+    request = "launch",
+    program = "${file}",
+    pythonPath = function()
+      local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
+      if venv then return venv .. "/bin/python" end
+      local cwd_venv = vim.fn.getcwd() .. "/.venv/bin/python"
+      if vim.fn.executable(cwd_venv) == 1 then return cwd_venv end
+      return vim.fn.exepath("python3") or vim.fn.exepath("python") or "python"
+    end,
+    console    = "integratedTerminal",
+    justMyCode = true,
+  },
+  {
+    name    = "Launch with args",
+    type    = "python",
+    request = "launch",
+    program = "${file}",
+    args = function()
+      local s = vim.fn.input("程序参数（无则直接回车）: ")
+      if s == "" then return {} end
+      return vim.split(s, "%s+", { trimempty = true })
+    end,
+    pythonPath = function()
+      local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
+      if venv then return venv .. "/bin/python" end
+      local cwd_venv = vim.fn.getcwd() .. "/.venv/bin/python"
+      if vim.fn.executable(cwd_venv) == 1 then return cwd_venv end
+      return vim.fn.exepath("python3") or "python"
+    end,
+    console    = "integratedTerminal",
+    justMyCode = false,
+  },
+  {
+    name    = "pytest (当前文件)",
+    type    = "python",
+    request = "launch",
+    module  = "pytest",
+    args    = { "${file}", "-v" },
+    console = "integratedTerminal",
+    justMyCode = false,
+    pythonPath = function()
+      local venv = os.getenv("VIRTUAL_ENV") or os.getenv("CONDA_PREFIX")
+      if venv then return venv .. "/bin/python" end
+      local cwd_venv = vim.fn.getcwd() .. "/.venv/bin/python"
+      if vim.fn.executable(cwd_venv) == 1 then return cwd_venv end
+      return vim.fn.exepath("python3") or "python"
+    end,
+  },
+  {
+    name    = "Attach to remote (debugpy)",
+    type    = "python",
+    request = "attach",
+    connect = { host = "127.0.0.1", port = 5678 },
+    pathMappings = { { localRoot = "${workspaceFolder}", remoteRoot = "." } },
+  },
+}
+
+-- ─────────────────────────────────────────────
+--  断点符号定义
+-- ─────────────────────────────────────────────
+vim.fn.sign_define("DapBreakpoint",          { text = "●", texthl = "DapBreakpoint",          linehl = "",              numhl = "" })
+vim.fn.sign_define("DapBreakpointCondition", { text = "◆", texthl = "DapBreakpointCondition", linehl = "",              numhl = "" })
+vim.fn.sign_define("DapBreakpointRejected",  { text = "●", texthl = "DapBreakpointRejected",  linehl = "",              numhl = "" })
+vim.fn.sign_define("DapLogPoint",            { text = "◉", texthl = "DapLogPoint",            linehl = "",              numhl = "" })
+vim.fn.sign_define("DapStopped",             { text = "▶", texthl = "DapStopped",             linehl = "DapStoppedLine", numhl = "" })
+
+-- 【修复颜色】NvChad base46 会在 ColorScheme 事件后重新刷颜色，
+-- 用 ColorScheme autocmd（而非 VimEnter）确保每次主题加载后都重新应用
+vim.api.nvim_create_autocmd("ColorScheme", {
+  pattern = "*",
+  callback = function()
+    vim.api.nvim_set_hl(0, "DapBreakpoint",          { fg = "#e06c75", bold = true })
+    vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#e5c07b", bold = true })
+    vim.api.nvim_set_hl(0, "DapBreakpointRejected",  { fg = "#5c6370" })
+    vim.api.nvim_set_hl(0, "DapLogPoint",            { fg = "#61afef", bold = true })
+    vim.api.nvim_set_hl(0, "DapStopped",             { fg = "#98c379", bold = true })
+    vim.api.nvim_set_hl(0, "DapStoppedLine",         { bg = "#2e3a2e" })
+  end,
+})
+-- 立即执行一次（处理已经加载完 colorscheme 的情况）
+vim.api.nvim_set_hl(0, "DapBreakpoint",          { fg = "#e06c75", bold = true })
+vim.api.nvim_set_hl(0, "DapBreakpointCondition", { fg = "#e5c07b", bold = true })
+vim.api.nvim_set_hl(0, "DapBreakpointRejected",  { fg = "#5c6370" })
+vim.api.nvim_set_hl(0, "DapLogPoint",            { fg = "#61afef", bold = true })
+vim.api.nvim_set_hl(0, "DapStopped",             { fg = "#98c379", bold = true })
+vim.api.nvim_set_hl(0, "DapStoppedLine",         { bg = "#2e3a2e" })
+
+-- ─────────────────────────────────────────────
+--  自动打开/关闭 DAP UI
+--  【修复terminal】使用 integratedTerminal 时自动跳到 terminal buffer
+-- ─────────────────────────────────────────────
+local dapui_ok, dapui = pcall(require, "dapui")
+
+if dapui_ok then
+  dap.listeners.after.event_initialized["dapui_config"] = function()
+    dapui.open()
+  end
+  dap.listeners.before.event_terminated["dapui_config"] = function()
+    dapui.close()
+  end
+  dap.listeners.before.event_exited["dapui_config"] = function()
+    dapui.close()
+  end
+end
+
+-- 【修复terminal】当 codelldb 打开 integratedTerminal 时自动跳到那个 buffer
+-- nvim-dap 用 "dap-terminal" 作为 terminal buffer 的名称前缀
+dap.listeners.after.event_initialized["auto_terminal"] = function()
+  -- 找到 dap terminal buffer 并在底部 split 中显示
+  vim.schedule(function()
+    for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+      local name = vim.api.nvim_buf_get_name(buf)
+      if name:match("dap%-terminal") or name:match("dap-terminal") then
+        -- 如果已经有窗口显示它就聚焦，否则在底部打开
+        local found_win = false
+        for _, win in ipairs(vim.api.nvim_list_wins()) do
+          if vim.api.nvim_win_get_buf(win) == buf then
+            vim.api.nvim_set_current_win(win)
+            found_win = true
+            break
+          end
+        end
+        if not found_win then
+          vim.cmd("belowright split")
+          vim.api.nvim_set_current_buf(buf)
+          vim.cmd("resize 12")
+        end
+        -- 自动进入 insert 模式让 terminal 开始渲染
+        vim.cmd("startinsert")
+        break
+      end
+    end
+  end)
+end
