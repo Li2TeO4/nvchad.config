@@ -1,5 +1,6 @@
 require("configs.keymaps")
 require("configs.function-keymaps")
+require("configs.scrollpad")
 --require("configs.ui")
 --require("configs.dap-keymaps")
 --require("configs.cmake-dap-helper")
