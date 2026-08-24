@@ -40,23 +40,83 @@ end
 -- ─────────────────────────────────────────────
 --  C / C++ 调试配置
 -- ─────────────────────────────────────────────
+-- 统一的程序参数输入：
+-- 支持空格分隔、双引号/单引号包裹含空格的参数，以及反斜杠转义
+-- 例如：./prog "hello world" 'a b' 用一个反斜杠转义空格可得到 "c d"
+-- 用法：程序参数（空格分隔，支持引号，无则直接回车）:
+local function parse_args(s)
+  local args = {}
+  local buf = {}
+  local in_token = false
+  local quote = nil -- 当前引号类型：" 或 '
+
+  local function push_char(c)
+    buf[#buf + 1] = c
+    in_token = true
+  end
+
+  local function end_token()
+    if in_token then
+      args[#args + 1] = table.concat(buf)
+      buf = {}
+      in_token = false
+    end
+  end
+
+  local i = 1
+  while i <= #s do
+    local c = s:sub(i, i)
+
+    if quote then
+      if c == quote then
+        quote = nil -- 引号闭合
+      elseif quote == '"' and c == [[\]] and i < #s then
+        -- 双引号内只转义 " 和反斜杠
+        local nxt = s:sub(i + 1, i + 1)
+        if nxt == '"' or nxt == [[\]] then
+          push_char(nxt)
+          i = i + 1
+        else
+          push_char(c)
+        end
+      else
+        push_char(c) -- 引号内普通字符（单引号内反斜杠保持原样）
+      end
+    else
+      if c == " " or c == "\t" then
+        end_token()
+      elseif c == '"' or c == "'" then
+        in_token = true -- 允许 "" / '' 产生空参数
+        quote = c
+      elseif c == [[\]] and i < #s then
+        push_char(s:sub(i + 1, i + 1)) -- 引号外反斜杠转义下一个字符
+        i = i + 1
+      else
+        push_char(c)
+      end
+    end
+
+    i = i + 1
+  end
+
+  if quote then
+    vim.notify(
+      "程序参数中的引号未闭合（缺少 " .. quote .. "），剩余内容已按普通文本继续解析",
+      vim.log.levels.WARN
+    )
+  end
+  end_token()
+
+  return args
+end
+
+local function input_args()
+  local s = vim.fn.input("程序参数（空格分隔，支持引号，无则直接回车）: ")
+  if s == "" then return {} end
+  return parse_args(s)
+end
+
 dap.configurations.c = {
-  {
-    name    = "Launch (手动输入可执行文件)",
-    type    = "codelldb",
-    request = "launch",
-    program = function()
-      return vim.fn.input("可执行文件路径: ", vim.fn.getcwd() .. "/bin/", "file")
-    end,
-    cwd         = "${workspaceFolder}",
-    stopOnEntry = false,
-    args        = {},
-    -- 【修复terminal】改用 console = "internalConsole"：
-    --   程序 stdout/stderr → DAP 底部 console 面板，自动显示，无需手动跳入
-    --   缺点：scanf/fgets 等交互式输入不可用（输入会卡住）
-    --   如果程序需要 scanf 交互，改回 "integratedTerminal" 并手动切到 terminal buffer 输入
-    console     = "internalConsole",
-  },
   {
     name    = "Launch (CMake Debug build，自动查找)",
     type    = "codelldb",
@@ -90,11 +150,8 @@ dap.configurations.c = {
     end,
     cwd         = "${workspaceFolder}",
     stopOnEntry = false,
-    args = function()
-      local s = vim.fn.input("程序参数（无则直接回车）: ")
-      if s == "" then return {} end
-      return vim.split(s, "%s+", { trimempty = true })
-    end,
+    args        = input_args,
+    -- stdout/stderr → DAP console 面板；scanf/fgets 等交互式输入不可用
     console     = "internalConsole",
   },
   {
@@ -109,8 +166,20 @@ dap.configurations.c = {
     end,
     cwd         = "${workspaceFolder}",
     stopOnEntry = false,
-    args        = {},
+    args        = input_args,
     console     = "integratedTerminal",
+  },
+  {
+    name    = "Launch (手动输入可执行文件)",
+    type    = "codelldb",
+    request = "launch",
+    program = function()
+      return vim.fn.input("可执行文件路径: ", vim.fn.getcwd() .. "/bin/", "file")
+    end,
+    cwd         = "${workspaceFolder}",
+    stopOnEntry = false,
+    args        = input_args,
+    console     = "internalConsole",
   },
   {
     name    = "Attach to process",

@@ -9,7 +9,6 @@ return {
   {
     "neovim/nvim-lspconfig",
     config = function()
-      require("nvchad.configs.lspconfig").defaults()
       require "configs.lspconfig"
     end,
   },
@@ -54,6 +53,7 @@ return {
         "css-lsp",
         "pyright",
         "typescript-language-server",
+        "clangd",
       },
     },
   },
@@ -78,7 +78,7 @@ return {
     bigfile = { enabled = true },
     dashboard = { enabled = false },
     explorer = { enabled = true },
-    indent = { enabled = true },
+    indent = { enabled = false }, -- NvChad 已启用 indent-blankline，避免重复画缩进线
     input = { enabled = true },
     picker = { enabled = true },
     notifier = { enabled = true },
@@ -92,7 +92,10 @@ return {
 {
 	"cappyzawa/trim.nvim",
 	event = "BufWritePre",
-	opt = {},
+	opts = {},
+	config = function(_, opts)
+		require("trim").setup(opts)
+	end,
 },
 
 	{
@@ -102,19 +105,40 @@ return {
 	    local conf = require "nvchad.configs.cmp" -- 加载 NvChad 默认配置
 
     -- 冲突处理：如果自定义了快捷键，可能需要调整默认的 Tab 行为
-	    conf.mapping = cmp.mapping.preset.insert {
-      -- 1. 使用 Tab 和 回车键确认
-	      ["<Tab>"] = cmp.mapping.confirm { select = true },
-	      ["<CR>"] = cmp.mapping.confirm { select = true },
+    conf.mapping = cmp.mapping.preset.insert {
+      -- 1. 回车确认补全
+      ["<CR>"] = cmp.mapping.confirm { select = true },
 
-      -- 2. 使用 Alt + j/k 上下选择
-	      ["<A-j>"] = cmp.mapping.select_next_item(),
-	      ["<A-k>"] = cmp.mapping.select_prev_item(),
+      -- 2. Tab：补全菜单可见时确认；确认后/展开 snippet 后跳到下一个占位符
+      ["<Tab>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.confirm { select = true }
+        elseif require("luasnip").expand_or_jumpable() then
+          require("luasnip").expand_or_jump()
+        else
+          fallback()
+        end
+      end, { "i", "s" }),
+
+      -- 3. Shift+Tab：跳到上一个 snippet 占位符
+      ["<S-Tab>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.select_prev_item()
+        elseif require("luasnip").jumpable(-1) then
+          require("luasnip").jump(-1)
+        else
+          fallback()
+        end
+      end, { "i", "s" }),
+
+      -- 4. 使用 Alt + j/k 上下选择
+      ["<A-j>"] = cmp.mapping.select_next_item(),
+      ["<A-k>"] = cmp.mapping.select_prev_item(),
 
       -- 保留原有的上下箭头或 Ctrl-n/p 支持（可选）
-	      ["<C-p>"] = cmp.mapping.select_prev_item(),
-	      ["<C-n>"] = cmp.mapping.select_next_item(),
-	    }
+      ["<C-p>"] = cmp.mapping.select_prev_item(),
+      ["<C-n>"] = cmp.mapping.select_next_item(),
+    }
 
 	    return conf
 	  end,

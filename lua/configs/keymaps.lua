@@ -27,7 +27,7 @@ keymap.set("n", "<C-h>", "<C-w>h")
 keymap.set("n", "<C-l>", "<C-w>l")
 keymap.set("n", "<C-j>", "<C-w>j")
 keymap.set("n", "<C-k>", "<C-w>k")
-keymap.set("n", "<C-u>", "<C-w>u")
+-- 不覆盖 <C-u>：Neovim 没有 <C-w>u 命令，保留默认的半页上滚
 
 keymap.set({ "n", "x" }, "wq", "<CMD>:wq<CR>")
 keymap.set({ "n", "x" }, "<leader>q", "<CMD>:q<CR>")
@@ -55,3 +55,9 @@ keymap.set("n", "<leader>L", "<CMD>Lazy<CR>", { desc = "[Lazy] Open Lazy.nvim" }
 
 --打开nvim-tree
 keymap.set("n", "<leader>e", "<CMD>:NvimTreeToggle<CR>")
+
+-- 终端模式：jk / <Esc> 退出 insert 模式到 terminal-normal
+-- 这样在任何时候打开终端，都能用 <leader>q 直接关闭终端窗口。
+-- 注意：这两个映射必须在这里随启动加载，不能放在懒加载的 dap-keymaps 里。
+keymap.set("t", "<Esc>", "<C-\\><C-n>", { desc = "Terminal: 退出 insert 模式到 normal" })
+keymap.set("t", "jk", "<C-\\><C-n>", { desc = "Terminal: jk 退出 insert 模式" })

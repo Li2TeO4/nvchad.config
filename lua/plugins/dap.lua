@@ -5,13 +5,24 @@ return {
   -- 核心 DAP 引擎
   {
     "mfussenegger/nvim-dap",
+    -- 第一次按这些键时才加载 DAP，不再随 Neovim 启动加载
+    keys = {
+      { "<F5>", mode = "n" },
+      { "<F9>", mode = "n" },
+      { "<F10>", mode = "n" },
+      { "<F11>", mode = "n" },
+      { "<F12>", mode = "n" },
+      { "<leader>d", mode = { "n", "v" } },
+    },
     dependencies = {
+      "jay-babu/mason-nvim-dap.nvim", -- DAP 首次加载时初始化 Mason 适配器安装
       "rcarriga/nvim-dap-ui",
       "theHamsta/nvim-dap-virtual-text",
       "nvim-neotest/nvim-nio", -- nvim-dap-ui 依赖
     },
     config = function()
       require("configs.dap")
+      require("configs.dap-keymaps")
     end,
   },
 
@@ -51,6 +62,7 @@ return {
   -- Mason 自动安装 DAP 适配器
   {
     "jay-babu/mason-nvim-dap.nvim",
+    cmd = { "DapInstall", "DapUninstall" },
     dependencies = {
       "williamboman/mason.nvim",
       "mfussenegger/nvim-dap",
@@ -59,7 +71,9 @@ return {
       require("mason-nvim-dap").setup({
         ensure_installed = { "codelldb", "debugpy" },
         automatic_installation = true,
-        handlers = {}, -- 使用默认 handler，下方 configs/dap.lua 会覆盖
+        -- 只保留 Mason 安装/卸载能力，不让它重复注册 adapter/config，
+        -- 避免和 configs/dap.lua 里手写的配置打架
+        handlers = { function() end },
       })
     end,
   },
