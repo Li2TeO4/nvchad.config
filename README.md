@@ -16,8 +16,6 @@
 
 **按键记号**：`<leader>` = 空格，`<C-x>` = Ctrl+x，`<A-x>` = Alt+x，`<S-x>` = Shift+x，`<CR>` = 回车。
 
-> ⚠ 两个默认映射按了会报错（本机环境缺失，见第 13 节）：
-> `<leader>ch`（NvCheatsheet 插件未安装）、`<leader>gg`（lazygit 命令未安装）。
 
 ---
 
