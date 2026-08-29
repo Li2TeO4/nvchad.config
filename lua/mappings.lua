@@ -1,15 +1,6 @@
 require "nvchad.mappings"
 
--- add yours here
-
-local map = vim.keymap.set
-
-map("n", ";", ":", { desc = "CMD enter command mode" })
-map("i", "jk", "<ESC>")
-
-map({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")
-
--- DAP 键位不再在启动时加载：由 plugins/dap.lua 里的 keys 触发，
--- nvim-dap 加载后会在它的 config 中 require("configs.dap-keymaps")。
+-- 用户键位不放在这里：通用键位见 lua/configs/keymaps.lua（唯一出处），
+-- DAP 键位由 plugins/dap.lua 懒加载（configs/dap-keymaps.lua）。
+-- 这里只负责注册 CMake 辅助命令（:CMakeDebug / :CMakeConfigure）。
 require("configs.cmake-dap-helper")
-

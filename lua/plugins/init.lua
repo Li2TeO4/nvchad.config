@@ -104,7 +104,7 @@ return {
 	    local cmp = require "cmp"
 	    local conf = require "nvchad.configs.cmp" -- 加载 NvChad 默认配置
 
-    -- 冲突处理：如果自定义了快捷键，可能需要调整默认的 Tab 行为
+    -- 在 NvChad 默认 cmp 配置基础上覆盖补全键位（说明见下方 1-4）
     conf.mapping = cmp.mapping.preset.insert {
       -- 1. 回车确认补全
       ["<CR>"] = cmp.mapping.confirm { select = true },
@@ -255,16 +255,4 @@ return {
     end,
   },
 
-  -- test new blink
-  -- { import = "nvchad.blink.lazyspec" },
-
-  -- {
-  -- 	"nvim-treesitter/nvim-treesitter",
-  -- 	opts = {
-  -- 		ensure_installed = {
-  -- 			"vim", "lua", "vimdoc",
-  --      "html", "css"
-  -- 		},
-  -- 	},
-  -- },
 }

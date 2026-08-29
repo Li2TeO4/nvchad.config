@@ -32,9 +32,6 @@ M.base46 = {
 	   -- hl_add 用于新增或强制覆盖任意高亮组
     hl_add = {
 		FloatBorder  = { fg = "#00ffff" },
-		-- NormalFloat 的 bg = "none" 在 transparency = true 时已经由
-		-- base46 全局处理了，这里重复设置可能引起冲突，建议删掉
-		-- NormalFloat  = { bg = "none" },
 		TelescopeBorder = { fg = "#00ffff" },
 		MasonHeader          = { fg = "#00ffff" },
 		MasonHeaderSecondary = { fg = "#00ffff" },

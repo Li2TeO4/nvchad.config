@@ -55,18 +55,3 @@ map("n", "<leader>dtb", "<cmd>Telescope dap list_breakpoints<CR>", { desc = "DAP
 map("n", "<leader>dtf", "<cmd>Telescope dap frames<CR>",           { desc = "DAP: Frames" })
 map("n", "<leader>dtc", "<cmd>Telescope dap commands<CR>",         { desc = "DAP: Commands" })
 map("n", "<leader>dtv", "<cmd>Telescope dap variables<CR>",        { desc = "DAP: Variables" })
-
--- ─────────────────────────────────────────────
---  【修复3】integratedTerminal（DAP terminal buffer）的 Esc 映射
---
---  terminal buffer 进入 insert 模式后，<Esc> 被 terminal 本身捕获，
---  无法通过普通 <Esc> 退到 normal 模式。
---  解决方案：在 terminal 模式下映射 <Esc> → <C-\><C-n>（terminal 的标准退出序列）
---
---  注意：这会影响所有 terminal buffer（包括非 DAP 的）。
---  如只想作用于 DAP terminal，可在 dap.listeners 里用 buf-local 映射。
--- ─────────────────────────────────────────────
-map("t", "<Esc>", "<C-\\><C-n>", { desc = "Terminal: 退出 insert 模式到 normal" })
-
--- 如果你有自定义的 insert→normal 快捷键（比如 jk），也加一条：
-map("t", "jk", "<C-\\><C-n>", { desc = "Terminal: jk 退出 insert 模式" })

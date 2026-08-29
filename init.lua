@@ -28,7 +28,7 @@ require("lazy").setup({
 -- load theme
 dofile(vim.g.base46_cache .. "defaults")
 dofile(vim.g.base46_cache .. "statusline")
---require("base46").load_all_highlights()
+-- base46 高亮的重新应用在 lua/autocmds.lua 的 LazyDone 回调里做
 
 require "options"
 require "autocmds"

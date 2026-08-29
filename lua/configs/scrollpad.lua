@@ -12,12 +12,8 @@ local PAD_ABOVE = 4   -- 光标上方尽量保留的视觉行数（到文件顶�
 local function visual_lines_of(winid, bufnr, lnum)
   local width = vim.api.nvim_win_get_width(winid)
   -- 减去 numberwidth 和 signcolumn 等占用的宽度
-  local info = vim.api.nvim_win_call(winid, function()
-    return {
-      vim.fn.getwininfo(winid)[1],
-    }
-  end)
-  local textoff = info[1] and info[1].textoff or 0
+  local info = vim.fn.getwininfo(winid)[1]
+  local textoff = info and info.textoff or 0
   local effective_width = width - textoff
   if effective_width <= 0 then effective_width = 1 end
 
@@ -50,7 +46,6 @@ local function adjust_scroll()
 
   -- 当前窗口第一个可见的 buffer-line（topline，1-indexed）
   local topline = vim.fn.line("w0")
-  local botline = vim.fn.line("w$")
 
   -- 光标这一行本身占用的视觉行数
   local cursor_vlines = visual_lines_of(winid, bufnr, cursor_lnum)

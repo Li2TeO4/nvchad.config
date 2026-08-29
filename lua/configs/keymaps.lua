@@ -1,9 +1,12 @@
--- Keymaps are automatically loaded on the VeryLazy event
--- Default keymaps that are always set: https://github.com/LazyVim/LazyVim/blob/main/lua/lazyvim/config/keymaps.lua
--- Add any additional keymaps here
-vim.g.mapleader = " "
+-- 通用键位（非 DAP）的唯一出处，由 myconfig.lua 在启动时加载。
+-- NvChad 默认键位由 lua/mappings.lua 中的 require("nvchad.mappings") 加载；
+-- DAP 键位见 lua/configs/dap-keymaps.lua（随 nvim-dap 懒加载）。
 
 local keymap = vim.keymap
+
+-- 命令模式快捷入口 / 快速保存
+keymap.set("n", ";", ":", { desc = "CMD enter command mode" })
+keymap.set({ "n", "i", "v" }, "<C-s>", "<cmd> w <cr>")
 
 -- 输入模式
 keymap.set("i", "jk", "<ESC>")
@@ -20,8 +23,8 @@ keymap.set("v", "K", ":m '<-2<CR>gv=gv")
 
 -- 正常模式
 -- 窗口
-keymap.set("n", "<leader>sv", "<C-w>v") --水平新增窗口
-keymap.set("n", "<leader>sh", "<C-w>s") --垂直新增窗口
+keymap.set("n", "<leader>sv", "<C-w>v") --左右分屏（垂直分割）
+keymap.set("n", "<leader>sh", "<C-w>s") --上下分屏（水平分割）
 
 keymap.set("n", "<C-h>", "<C-w>h")
 keymap.set("n", "<C-l>", "<C-w>l")
@@ -40,7 +43,6 @@ keymap.set("n", "<C-t>", function()
 end, { desc = "Close current tab" })
 
 keymap.set("n", "<leader>Q", "<CMD>:q!<CR>") --强制退出
-keymap.set("n", "<leader>q", "<CMD>:q<CR>") --退出
 keymap.set("n", "<leader>wq", "<CMD>:wq<CR>") --保存并退出
 keymap.set("n", "<leader>ww", "<CMD>:w<CR>") --保存
 keymap.set("n", "<leader>W", "<CMD>:w!<CR>") --强制保存

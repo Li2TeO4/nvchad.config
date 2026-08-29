@@ -1,25 +1,6 @@
 require("nvchad.configs.lspconfig").defaults()
 
--- local servers = { "html", "cssls" }
--- vim.lsp.enable(servers)
-
--- read :h vim.lsp.config for changing options of lsp servers 
-
-local on_attach = require("nvchad.configs.lspconfig").on_attach
-local on_init = require("nvchad.configs.lspconfig").on_init
-local capabilities = require("nvchad.configs.lspconfig").capabilities
-
-local servers = { "html", "clangd", "pyright" }
-
--- for _, lsp in ipairs(servers) do
---   local status_ok, lspconfig = pcall(require, "lspconfig")
---   if status_ok then
---     lspconfig[lsp].setup {
---       on_attach = on_attach,
---       on_init = on_init,
---       capabilities = capabilities,
---     }
---   end
--- end
-
-vim.lsp.enable(servers)
+-- 使用 Neovim 0.11+ 的 vim.lsp.enable 启动 LSP 服务器，
+-- 服务器本体由 Mason 安装（见 plugins/init.lua 的 ensure_installed）。
+-- 调整服务器选项见 :h vim.lsp.config
+vim.lsp.enable({ "html", "clangd", "pyright" })
