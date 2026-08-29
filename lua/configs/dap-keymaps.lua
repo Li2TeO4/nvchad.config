@@ -40,10 +40,10 @@ map("n", "<leader>df", function()
   local w = require("dap.ui.widgets")
   w.centered_float(w.frames)
 end, { desc = "DAP: Stack Frames" })
-map("n", "<leader>ds", function()
+map("n", "<leader>dv", function()
   local w = require("dap.ui.widgets")
   w.centered_float(w.scopes)
-end, { desc = "DAP: Scopes" })
+end, { desc = "DAP: Scopes (变量作用域)" })
 
 -- DAP UI
 map("n", "<leader>du", dapui.toggle, { desc = "DAP: Toggle UI" })
