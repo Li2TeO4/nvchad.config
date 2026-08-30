@@ -2,9 +2,9 @@ require "nvchad.options"
 
 -- add yours here!
 
--- vim.opt.number = true
--- vim.opt.relativenumber = true
--- vim.opt.numberwidth = 4
+vim.opt.number = true
+vim.opt.relativenumber = true
+vim.opt.numberwidth = 4
 vim.opt.listchars		= { tab = ">-", trail = "-" }
 vim.opt.list			= true
 
