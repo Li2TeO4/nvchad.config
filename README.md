@@ -78,6 +78,17 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 | `<leader>n` / `<leader>rn` | n | 开关绝对行号 / 相对行号 |
 | `u` / `<C-r>` | n | 撤销 / 重做（undo 持久化，跨重启有效） |
 
+**标记（marks）**：行号前出现的 `j`、`m`、`k` 等字母就是本地标记，由 `m` + 字母设置（如 `ma`、`mj`）。
+
+| 按键 | 功能 |
+|---|---|
+| `m{a-zA-Z}` | 在光标行设置标记（小写=当前文件，大写=跨文件） |
+| `'{x}` / `` `{x}`` | 跳到标记所在行行首 / 精确位置 |
+| `<leader>ma` | Telescope 标记列表（模糊搜索跳转） |
+| `<leader>md` | 删除指定标记（随后按标记字母） |
+| `<leader>ml` | 删除当前行标记；数字前缀指定行数，如 `3<leader>ml` = 当前行起共 3 行（同 `3yy` 语义） |
+| `<leader>mD` | 删除全部标记 |
+
 ---
 
 ## 4. 窗口、分屏、Buffer 与终端
@@ -400,6 +411,8 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | Buffer | `<Tab>` / `<S-Tab>` | 上下一个 buffer |
 | Buffer | `<C-t>` / `<leader>x` | 关闭 buffer |
 | 终端 | `<leader>h` / `<leader>v` / `<A-i>` | 横 / 纵 / 浮动终端 |
+| 标记 | `m{x}` / `'{x}` / `<leader>ma` | 设置 / 跳转 / 列表 |
+| 标记 | `<leader>md` / `ml` / `mD` | 删指定 / 删当前行(支持 3ml) / 删全部 |
 | LSP | `gd` / `gD` / `<leader>D` | 定义 / 声明 / 类型定义 |
 | LSP | `<leader>ra` | 重命名 |
 | LSP | `[d` / `]d` / `<C-w>d` | 诊断导航 / 悬浮诊断 |
