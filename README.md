@@ -28,12 +28,12 @@ lua/options.lua           基础选项：Tab=4、显示 tab/行尾、行号、un
 lua/mappings.lua          NvChad 默认键位 + CMake 辅助命令注册
 lua/autocmds.lua          LazyDone 后重新应用高亮
 lua/myconfig.lua          启动时加载的通用模块汇总
-lua/plugins/init.lua      插件清单（LSP/Mason/补全/Git/snacks/nvcheatsheet…）
+lua/plugins/init.lua      插件清单（LSP/Mason/补全/Git/snacks…）
 lua/plugins/dap.lua       调试插件组（懒加载，首次按 F5/F9 才加载）
 lua/configs/keymaps.lua   ★ 你的通用键位（唯一出处，加键位改这里）
 lua/configs/function-keymaps.lua  行尾加分号/删末尾字符
 lua/configs/scrollpad.lua 自研非对称滚动（光标距底部 4 行自动滚屏）
-lua/configs/lspconfig.lua LSP：启用 html / clangd / pyright + 补充 K/gr/gi（lua_ls 由 NvChad 默认启用）
+lua/configs/lspconfig.lua LSP：启用 html / clangd / pyright（lua_ls 由 NvChad 默认启用）
 lua/configs/dap.lua       DAP 核心：适配器、C/C++/Python 调试配置、断点符号
 lua/configs/dap-ui.lua    DAP UI 布局（左侧栏 + 底部 REPL）
 lua/configs/dap-keymaps.lua 调试键位（F 键 + <leader>d 系列）
@@ -152,13 +152,11 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 | `<leader>wa` / `<leader>wr` / `<leader>wl` | 添加 / 移除 / 列出 workspace 目录 |
 | `[d` / `]d` | 上一个 / 下一个诊断（Neovim 0.12 内置） |
 | `<C-w>d` | 悬浮显示光标处诊断详情（内置） |
-| `<leader>ds` | 诊断列表（loclist） |
-| `K` | 悬浮文档 hover（自定义补充） |
-| `gr` | 查看所有引用（自定义补充） |
-| `gi` | 跳转到实现（自定义补充） |
+| `<leader>ds` | 诊断列表（loclist）——⚠ DAP 加载后此键被 DAP 的"查看作用域"覆盖，见 10.3 |
 
-> K / gr / gi 是本配置在 `lua/configs/lspconfig.lua` 的 LspAttach 中补充的
-> （NvChad v2.5 默认没有绑定这三个键）。
+> ⚠ NvChad v2.5 没有绑定 `K`（悬浮文档）、`gr`（引用）、`gi`（实现）。
+> 需要时自行映射或在命令里用：
+> `:lua vim.lsp.buf.hover()` / `vim.lsp.buf.references()` / `vim.lsp.buf.implementation()`。
 
 ### 6.3 管理服务器
 
@@ -295,7 +293,7 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | `<leader>dh` | 悬浮显示光标处变量值 |
 | `<leader>dp` | 预览表达式（v 模式：预览选中内容） |
 | `<leader>df` | 调用栈（浮动窗口） |
-| `<leader>dv` | 查看作用域变量（浮动窗口） |
+| `<leader>ds` | 查看作用域变量（浮动窗口）⚠ 覆盖了 NvChad 的"诊断列表" |
 | `<leader>du` | 开关 DAP UI 面板 |
 | `<leader>de` | 求值表达式（v 模式：求值选中文本） |
 
@@ -373,10 +371,12 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 
 | 现象 | 原因与处理 |
 |---|---|
+| 按 `<leader>ch` 报 "not an editor command" | NvCheatsheet 插件未安装；不需要可忽略，需要则把 `nvzone/nvcheatsheet` 加进插件清单 |
 | 按 `<leader>gg` 报 lazygit 不存在 | 本机未安装 lazygit，见 9.3 |
 | `<leader>e` 不是开关而是聚焦 | NvChad 默认映射（后加载）覆盖了你自定义的 `NvimTreeToggle`；开关请用 `<C-n>`，想要 Toggle 行为可改 `lua/mappings.lua` 或 keymaps 顺序 |
-| 首次按 `<leader>ch` 报错 | nvcheatsheet 插件已加入清单，下次启动 nvim 时 lazy 会自动安装（需联网）；若安装失败用 `:Lazy` 查看 |
+| `<leader>ds` 调试后变成查看作用域 | DAP 加载后覆盖了 NvChad 的"诊断列表"；看诊断列表可用 `:lua vim.diagnostic.setloclist()` |
 | clangd 报找不到头文件 | 缺 `compile_commands.json`，CMake 项目执行 `:CMakeConfigure` |
+| 想用 K 悬浮文档 / gr 引用 / gi 实现 | NvChad v2.5 未绑定，需自行映射（见 6.2） |
 | 首次打开新语言没有高亮/补全 | treesitter 解析器自动装 vim/lua 等；其他语言 `:TSInstall <lang>`，LSP 用 `:Mason` 装 |
 | 换机器恢复配置 | `git clone` 后启动 nvim 自动装插件；Mason 工具需 `:Mason` 手动装（列表见 6.3） |
 | 更新后界面/键位变化 | 先 `:Lazy sync`；主题高亮问题按 `<leader>th` 重选主题 |
@@ -403,7 +403,6 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | LSP | `gd` / `gD` / `<leader>D` | 定义 / 声明 / 类型定义 |
 | LSP | `<leader>ra` | 重命名 |
 | LSP | `[d` / `]d` / `<C-w>d` | 诊断导航 / 悬浮诊断 |
-| LSP | `K` / `gr` / `gi` | 悬浮文档 / 引用 / 实现 |
 | 补全 | `<CR>` / `<Tab>` / `<S-Tab>` | 确认 / 确认 / 上一项 |
 | Git | `]h` / `[h` / `<leader>hs` / `<leader>hr` | hunk 导航 / 暂存 / 重置 |
 | Git | `<leader>gb` / `<leader>gd` | blame / diff |
@@ -413,7 +412,7 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | 调试 | `F5` / `F9` / `F10` / `F11` / `F12` | 继续 / 断点 / 跳过 / 进入 / 跳出 |
 | 调试 | `<leader>dc` / `dn` / `di` / `do` / `dq` | 继续 / 跳过 / 进入 / 跳出 / 终止 |
 | 调试 | `<leader>db` / `dB` / `dl` / `dx` | 断点 / 条件 / 日志 / 清除 |
-| 调试 | `<leader>dr` / `du` / `dh` / `dp` / `dv` | REPL / UI / hover / 预览 / 作用域 |
+| 调试 | `<leader>dr` / `du` / `dh` / `dp` | REPL / UI / hover / 预览 |
 | 调试 | `<leader>dR` / `dC` / `de` | 重复上次 / 到光标 / 求值 |
 | 主题 | `<leader>th` | 主题切换 |
 | 帮助 | `<leader>wK` | which-key 总览 |

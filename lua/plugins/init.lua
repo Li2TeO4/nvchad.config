@@ -158,9 +158,6 @@ return {
  "nvchad/volt", -- optional, needed for theme switcher
  -- or just use Telescope themes
 
- -- NvChad 键位速查表（<leader>ch），首次启动自动安装
- "nvzone/nvcheatsheet",
-
   -- ╭─────────────────────────────────────────╮
   -- │              Git 工具                    │
   -- ╰─────────────────────────────────────────╯
