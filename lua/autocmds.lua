@@ -10,3 +10,15 @@ vim.api.nvim_create_autocmd("User", {
     require("base46").load_all_highlights()
   end,
 })
+
+-- nvdash 启动仪表盘会通过 winopts 把窗口的 number/relativenumber 关掉，
+-- 从仪表盘打开普通文件后该窗口设置仍会保留，导致行号消失。
+-- 这里在普通文件的 filetype 建立时恢复行号显示。
+vim.api.nvim_create_autocmd("FileType", {
+  callback = function(ev)
+    if ev.match ~= "nvdash" and vim.bo.buftype == "" then
+      vim.wo.number = true
+      vim.wo.relativenumber = true
+    end
+  end,
+})

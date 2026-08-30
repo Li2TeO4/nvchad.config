@@ -1,6 +1,6 @@
 # Neovim 配置使用说明
 
-> 基于 **NvChad v2.5** + **lazy.nvim**，主题 **aquarium**（透明背景）。
+> 基于 **NvChad v2.5** + **lazy.nvim**，主题 **catppuccin**（透明背景）。
 > 面向 **C/C++**（clangd + codelldb + CMake）、**Python**（pyright + debugpy）、
 > **Web**（html/css/json）与 **Lua** 开发，重点是 DAP 调试与 Git 工作流。
 
@@ -12,6 +12,7 @@
 |---|---|---|
 | which-key 菜单 | 按一下 `<leader>`（空格）稍等 | 弹出当前可用键位分组菜单 |
 | which-key 总览 | `<leader>wK` | 列出所有键位 |
+| NvChad 键位速查表 | `<leader>ch` | 内置 cheatsheet（grid 布局，再按一次关闭） |
 | 本文件 | — | 最全的速查表在文末第 14 节 |
 
 **按键记号**：`<leader>` = 空格，`<C-x>` = Ctrl+x，`<A-x>` = Alt+x，`<S-x>` = Shift+x，`<CR>` = 回车。
@@ -23,7 +24,7 @@
 
 ```
 init.lua                  入口：bootstrap lazy + NvChad + 加载各模块
-lua/chadrc.lua            外观：主题 aquarium、透明、边框/高亮配色
+lua/chadrc.lua            外观：主题 catppuccin、透明、边框/高亮配色
 lua/options.lua           基础选项：Tab=4、显示 tab/行尾、行号、undo 持久化
 lua/mappings.lua          NvChad 默认键位 + CMake 辅助命令注册
 lua/autocmds.lua          LazyDone 后重新应用高亮
@@ -51,7 +52,7 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 - **更新插件**：`:Lazy` 打开面板，按 `U` 全部更新，或 `:Lazy sync` 同步到 lock 文件。
 - **更新 Mason 工具（LSP/格式化器/调试器）**：`:Mason` 面板内 `U`，或 `:MasonUpdate`。
 - **健康检查**：`:checkhealth`。
-- **换主题**：`<leader>th` 打开主题选择器（aquarium 为当前主题，volt 支持实时切换）。
+- **换主题**：`<leader>th` 打开主题选择器（catppuccin 为当前主题，volt 支持实时切换）。
 
 ---
 
@@ -371,7 +372,6 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 
 | 现象 | 原因与处理 |
 |---|---|
-| 按 `<leader>ch` 报 "not an editor command" | NvCheatsheet 插件未安装；不需要可忽略，需要则把 `nvzone/nvcheatsheet` 加进插件清单 |
 | 按 `<leader>gg` 报 lazygit 不存在 | 本机未安装 lazygit，见 9.3 |
 | `<leader>e` 不是开关而是聚焦 | NvChad 默认映射（后加载）覆盖了你自定义的 `NvimTreeToggle`；开关请用 `<C-n>`，想要 Toggle 行为可改 `lua/mappings.lua` 或 keymaps 顺序 |
 | `<leader>ds` 调试后变成查看作用域 | DAP 加载后覆盖了 NvChad 的"诊断列表"；看诊断列表可用 `:lua vim.diagnostic.setloclist()` |
@@ -415,4 +415,4 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | 调试 | `<leader>dr` / `du` / `dh` / `dp` | REPL / UI / hover / 预览 |
 | 调试 | `<leader>dR` / `dC` / `de` | 重复上次 / 到光标 / 求值 |
 | 主题 | `<leader>th` | 主题切换 |
-| 帮助 | `<leader>wK` | which-key 总览 |
+| 帮助 | `<leader>ch` / `<leader>wK` | 键位速查表 / which-key 总览 |
