@@ -4,9 +4,12 @@
 --   上方：尽量保留 4 行，但允许光标抵近文件顶端时少于 4 行
 --
 -- 所有行数均以 TUI 可见行（考虑 wrap 折行）为准。
+-- 小窗口保护：窗口可显示行数 <= MIN_WIN_HEIGHT 时自动停用本模块，
+-- 避免 4+4 行的保护占满整个窗口。
 
 local PAD_BELOW = 4   -- 光标下方始终保留的视觉行数
 local PAD_ABOVE = 4   -- 光标上方尽量保留的视觉行数（到文件顶端时可少于此值）
+local MIN_WIN_HEIGHT = 10 -- 窗口可显示行数 <= 此值时停用本模块
 
 -- 获取某 buffer-line（1-indexed）在指定窗口中占用的视觉行数
 local function visual_lines_of(winid, bufnr, lnum)
@@ -35,14 +38,18 @@ end
 
 local function adjust_scroll()
   local winid = vim.api.nvim_get_current_win()
+
+  -- 窗口可显示行数过小（<= MIN_WIN_HEIGHT）时停用自定义滚动：
+  -- 此时上下 4 行的保护会占满窗口，直接交给原生滚动行为
+  local win_height = vim.api.nvim_win_get_height(winid)
+  if win_height <= MIN_WIN_HEIGHT then
+    return
+  end
+
   local bufnr = vim.api.nvim_get_current_buf()
 
   -- 当前光标所在 buffer-line（1-indexed）
   local cursor_lnum = vim.api.nvim_win_get_cursor(winid)[1]
-  -- 窗口高度（可显示的视觉行数）
-  local win_height = vim.api.nvim_win_get_height(winid)
-  -- 总 buffer 行数
-  local total_lines = vim.api.nvim_buf_line_count(bufnr)
 
   -- 当前窗口第一个可见的 buffer-line（topline，1-indexed）
   local topline = vim.fn.line("w0")
