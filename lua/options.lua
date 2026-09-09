@@ -10,7 +10,7 @@ vim.opt.tabstop			= 4
 vim.opt.shiftwidth		= 4
 vim.opt.softtabstop		= 4
 
-local o = vim.o
+local o = vim.opt
 o.cursorlineopt			='both' -- to enable cursorline!
 o.number				= true
 o.relativenumber		= true
