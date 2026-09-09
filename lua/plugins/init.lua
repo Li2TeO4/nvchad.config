@@ -66,6 +66,23 @@ return {
 		main = "rainbow-delimiters.setup",
 	},
 
+	{
+		"MeanderingProgrammer/render-markdown.nvim",
+		ft = { "markdown" },
+		dependencies = { "nvim-tree/nvim-web-devicons" },
+		opts = {},
+	},
+
+	{
+		"nvim-treesitter/nvim-treesitter",
+		opts = function()
+			-- 在 NvChad 默认配置基础上追加 markdown 解析器（render-markdown 依赖）
+			local opts = require("nvchad.configs.treesitter")
+			vim.list_extend(opts.ensure_installed, { "markdown", "markdown_inline" })
+			return opts
+		end,
+	},
+
 {
   "folke/snacks.nvim",
   priority = 1000,
