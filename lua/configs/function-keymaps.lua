@@ -63,3 +63,24 @@ keymap.set("n", "<leader>mD", function()
   vim.cmd "silent delmarks!"
   vim.notify("已删除全部标记", vim.log.levels.INFO)
 end, { desc = "删除全部标记" })
+
+-- 快速查看本配置的 README 使用说明：
+-- 未打开时在新标签页打开；已打开则直接聚焦对应窗口，避免重复开页
+local function open_readme()
+  local path = vim.fn.stdpath("config") .. "/README.md"
+  local buf = vim.fn.bufnr(path)
+  if buf == -1 then
+    vim.cmd("tabnew " .. vim.fn.fnameescape(path))
+    return
+  end
+  -- bufwinid 只搜当前标签页，用 win_findbuf 跨标签页找窗口
+  local wins = vim.fn.win_findbuf(buf)
+  if #wins > 0 then
+    vim.api.nvim_set_current_win(wins[1])
+  else
+    vim.cmd "tabnew"
+    vim.api.nvim_set_current_buf(buf)
+  end
+end
+
+keymap.set("n", "<leader>?", open_readme, { desc = "打开配置 README" })

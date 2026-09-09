@@ -13,7 +13,7 @@
 | which-key 菜单 | 按一下 `<leader>`（空格）稍等 | 弹出当前可用键位分组菜单 |
 | which-key 总览 | `<leader>wK` | 列出所有键位 |
 | NvChad 键位速查表 | `<leader>ch` | 内置 cheatsheet（grid 布局，再按一次关闭） |
-| 本文件 | — | 最全的速查表在文末第 14 节 |
+| 本文件（README） | `<leader>?` | 随时打开这份使用说明（已打开则直接跳过去）；最全速查表在文末第 14 节 |
 
 **按键记号**：`<leader>` = 空格，`<C-x>` = Ctrl+x，`<A-x>` = Alt+x，`<S-x>` = Shift+x，`<CR>` = 回车。
 
@@ -429,4 +429,4 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | 调试 | `<leader>dr` / `du` / `dh` / `dp` | REPL / UI / hover / 预览 |
 | 调试 | `<leader>dR` / `dC` / `de` | 重复上次 / 到光标 / 求值 |
 | 主题 | `<leader>th` | 主题切换 |
-| 帮助 | `<leader>ch` / `<leader>wK` | 键位速查表 / which-key 总览 |
+| 帮助 | `<leader>?` / `<leader>ch` / `<leader>wK` | 配置 README / 键位速查表 / which-key 总览 |
