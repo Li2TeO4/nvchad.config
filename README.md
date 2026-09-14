@@ -34,6 +34,7 @@ lua/plugins/dap.lua       调试插件组（懒加载，首次按 F5/F9 才加�
 lua/configs/keymaps.lua   ★ 你的通用键位（唯一出处，加键位改这里）
 lua/configs/function-keymaps.lua  行尾加分号/删末尾字符
 lua/configs/scrollpad.lua 自研非对称滚动（光标距底部 4 行自动滚屏）
+lua/configs/nvimtree.lua  文件树行号样式（上标小字形 + 反色高亮 statuscolumn）
 lua/configs/lspconfig.lua LSP：启用 html / clangd / pyright（lua_ls 由 NvChad 默认启用）
 lua/configs/dap.lua       DAP 核心：适配器、C/C++/Python 调试配置、断点符号
 lua/configs/dap-ui.lua    DAP UI 布局（左侧栏 + 底部 REPL）
@@ -112,6 +113,14 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 | `<leader>q` | 关闭终端窗口（终端退出 insert 后使用） |
 
 **nvim-tree 面板内**：`<CR>` 打开文件，`a` 新建，`d` 删除，`r` 重命名，`R` 刷新，`c`/`x`/`p` 复制/剪切/粘贴。
+
+**文件树行号**：树中启用了行号 + 相对行号，可看相对行号直接数字跳转（如 `12j`）到目标文件。
+
+- 配色与编辑器**相反**：树里更关注目标文件 → **相对行号浅色**（`#B3D4DB`，显眼）、**当前行行号深色**（`#56868F`）；
+  两者由主行号配色演化而来（色相偏青绿 ≈190°、降低饱和度抬高灰度、明度分深浅两级）
+- 字形比正文略小：TUI 下无法真正改字号，实现上是把数字渲染成**上标字形**（`⁰¹²³…`），数字列宽压到 2 列
+- 由 `lua/configs/nvimtree.lua` 的 window-local `statuscolumn` 完成（`%#高亮组#` + 条件表达式两段式）；
+  若不喜欢上标字形，把该文件的 `SUPERSCRIPT` 映射去掉即可回到普通数字
 
 ---
 

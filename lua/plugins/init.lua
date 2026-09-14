@@ -39,8 +39,14 @@ return {
          max = 50,
          padding = 2,
        },
+       number = true,         -- 树中显示行号
+       relativenumber = true, -- 相对行号（由 configs/nvimtree.lua 渲染成上标小字形）
       },
     },
+    config = function(_, opts)
+      require("nvim-tree").setup(opts)
+      require("configs.nvimtree").setup()
+    end,
   },
 
   {

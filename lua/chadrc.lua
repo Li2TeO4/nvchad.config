@@ -37,6 +37,12 @@ M.base46 = {
 		MasonHeaderSecondary = { fg = "#00ffff" },
 		DapUIFloatBorder = { fg = "#00ffff" },
 		NvimTreeWindowPicker = { fg = "#00ffff", bold = true },
+
+		-- 文件树行号：由主行号配色同族演化 —— 色相偏向青绿（H≈190°），
+		-- 适当降低饱和度抬高灰度，再用明度拉开深浅两级。
+		-- 与编辑器相反：树中更关注目标文件，所以相对行号用浅色、当前行行号用深色。
+		NvimTreeLineNr       = { fg = "#B3D4DB" }, -- 相对行号：浅（H190 S35 L78）
+		NvimTreeCursorLineNr = { fg = "#56868F" }, -- 当前行号：深（H190 S25 L45）
     },
 }
 
