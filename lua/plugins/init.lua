@@ -39,8 +39,8 @@ return {
          max = 50,
          padding = 2,
        },
-       number = true,         -- 树中显示行号
-       relativenumber = true, -- 相对行号（由 configs/nvimtree.lua 渲染成上标小字形）
+       number = false,         -- 默认不显示行号；<leader>n 运行时开关（见 configs/nvimtree.lua）
+       relativenumber = false, -- 同上，一次性同时开关两个
       },
     },
     config = function(_, opts)

@@ -34,7 +34,7 @@ lua/plugins/dap.lua       调试插件组（懒加载，首次按 F5/F9 才加�
 lua/configs/keymaps.lua   ★ 你的通用键位（唯一出处，加键位改这里）
 lua/configs/function-keymaps.lua  行尾加分号/删末尾字符
 lua/configs/scrollpad.lua 自研非对称滚动（光标距底部 4 行自动滚屏）
-lua/configs/nvimtree.lua  文件树行号样式（上标小字形 + 反色高亮 statuscolumn）
+lua/configs/nvimtree.lua  文件树行号开关（<leader>n）与配色「改色口」
 lua/configs/lspconfig.lua LSP：启用 html / clangd / pyright（lua_ls 由 NvChad 默认启用）
 lua/configs/dap.lua       DAP 核心：适配器、C/C++/Python 调试配置、断点符号
 lua/configs/dap-ui.lua    DAP UI 布局（左侧栏 + 底部 REPL）
@@ -114,13 +114,12 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 
 **nvim-tree 面板内**：`<CR>` 打开文件，`a` 新建，`d` 删除，`r` 重命名，`R` 刷新，`c`/`x`/`p` 复制/剪切/粘贴。
 
-**文件树行号**：树中启用了行号 + 相对行号，可看相对行号直接数字跳转（如 `12j`）到目标文件。
+**文件树行号**：默认**不显示**；按 **`<leader>n`** 一次性开关「绝对行号 + 相对行号」（再按一次关闭，开关状态在本次会话内保持）。
+开启后可直接用相对行号跳转，例如光标在树里按 `12j` 就能跳到下方第 12 个文件。
 
-- 配色与编辑器**相反**：树里更关注目标文件 → **相对行号浅色**（`#B3D4DB`，显眼）、**当前行行号深色**（`#56868F`）；
-  两者由主行号配色演化而来（色相偏青绿 ≈190°、降低饱和度抬高灰度、明度分深浅两级）
-- 字形比正文略小：TUI 下无法真正改字号，实现上是把数字渲染成**上标字形**（`⁰¹²³…`），数字列宽压到 2 列
-- 由 `lua/configs/nvimtree.lua` 的 window-local `statuscolumn` 完成（`%#高亮组#` + 条件表达式两段式）；
-  若不喜欢上标字形，把该文件的 `SUPERSCRIPT` 映射去掉即可回到普通数字
+- 配色与编辑器**相反**：树里更关注目标文件 → **相对行号浅色**（`#85c1d4`，显眼）、**当前行行号深色**（`#64909e`）
+- **改色**：编辑 `lua/configs/nvimtree.lua` 顶部标有「改色口」的 `COLORS` 表，只改两个色号即可
+- 注意：`<leader>n` 覆盖了 NvChad 默认的「切换编辑器绝对行号」；编辑器行号由 `options.lua` 常开，无需手动切换
 
 ---
 
@@ -394,6 +393,7 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | 现象 | 原因与处理 |
 |---|---|
 | 按 `<leader>gg` 报 lazygit 不存在 | 本机未安装 lazygit，见 9.3 |
+| `<leader>n` 不再是编辑器行号开关 | 现在用于开关**文件树行号**（见第 4 节）；编辑器行号由 `options.lua` 常开，一般不需要手动切换 |
 | `<leader>e` 不是开关而是聚焦 | NvChad 默认映射（后加载）覆盖了你自定义的 `NvimTreeToggle`；开关请用 `<C-n>`，想要 Toggle 行为可改 `lua/mappings.lua` 或 keymaps 顺序 |
 | `<leader>ds` 调试后变成查看作用域 | DAP 加载后覆盖了 NvChad 的"诊断列表"；看诊断列表可用 `:lua vim.diagnostic.setloclist()` |
 | clangd 报找不到头文件 | 缺 `compile_commands.json`，CMake 项目执行 `:CMakeConfigure` |
@@ -415,7 +415,7 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | 编辑 | `<leader>fm` | 格式化 |
 | 文件 | `<leader>ff` / `<leader>fa` / `<leader>fo` | 找文件 / 全部 / 最近 |
 | 文件 | `<leader>fw` / `<leader>fz` / `<leader>fb` | 全文搜索 / buffer 内 / buffer 列表 |
-| 文件 | `<C-n>` | 文件树开关 |
+| 文件 | `<C-n>` / `<leader>n` | 文件树开关 / 文件树行号开关 |
 | 窗口 | `<C-h/j/k/l>` | 窗口间移动 |
 | 窗口 | `<leader>sv` / `<leader>sh` | 左右 / 上下分屏 |
 | Buffer | `<Tab>` / `<S-Tab>` | 上下一个 buffer |

@@ -1,78 +1,107 @@
--- 文件树（nvim-tree）行号样式
+-- 文件树（nvim-tree）行号：开关 + 配色
 --
--- 需求：
---   1. 树中显示行号 + 相对行号，方便按相对行号快速跳到目标文件
---   2. 配色与编辑器里的行号同族但略有区别（见 chadrc.lua 的 hl_add）：
---        NvimTreeLineNr       = 相对行号 → 浅色（#B3D4DB），树中主要关注目标文件
---        NvimTreeCursorLineNr = 当前行号 → 深色（#56868F）
---      与编辑器的惯例相反（编辑器 CursorLineNr 浅、LineNr 深）
---   3. 字形比正文略小：TUI 无法改变字体大小，这里用上标数字（⁰¹²³…）模拟小字形
+-- 行为：
+--   · 默认不显示行号
+--   · <leader>n 一次性开关「绝对行号 + 相对行号」（开关状态在本次会话内保持）
+--   · 数字用普通字形（不做上标缩小）
 --
--- 实现：给树窗口设置 window-local 的 'statuscolumn'。
--- statuscolumn 里 %{...} 表达式的返回值不会被再次解析，所以高亮标记必须写在
--- 外层：用「高亮段 + 条件表达式」两段，当前行只让第一段出内容，其余行只让第二段出内容。
+-- 配色：只改下面 COLORS 里的两个色号即可。
+--   树里更关注目标文件，所以相对行号用浅色（显眼）、当前行行号用深色 —— 与编辑器相反。
+--   nvim-tree 用 winhl 把窗口的 LineNr / CursorLineNr 映射到
+--   NvimTreeLineNr / NvimTreeCursorLineNr，这里只负责给这两个组上色。
 
 local M = {}
 
--- 上标数字：TUI 下唯一能"缩小"数字字形的手段
-local SUPERSCRIPT = {
-  ["0"] = "⁰", ["1"] = "¹", ["2"] = "²", ["3"] = "³", ["4"] = "⁴",
-  ["5"] = "⁵", ["6"] = "⁶", ["7"] = "⁷", ["8"] = "⁸", ["9"] = "⁹",
+-- ┌───────────────────────────────────────────────────────────────┐
+-- │  改色口                                                        │
+-- │  浅色 = 相对行号（树中主要关注目标文件，要显眼）                │
+-- │  深色 = 当前行行号                                              │
+-- └───────────────────────────────────────────────────────────────┘
+local COLORS = {
+  relative = "#85c1d4", -- 浅色 → 相对行号
+  current = "#64909e", -- 深色 → 当前行行号
 }
 
-local WIDTH = 2 -- 数字列宽（上标字形窄，2 列足够；超出会自动加宽）
-
-local function format_num(num)
-  local text = tostring(num):gsub("%d", SUPERSCRIPT)
-  -- 注意：上标字形是 2~3 字节但只占 1 格，必须按显示宽度补位才对得齐
-  local pad = math.max(0, WIDTH - vim.fn.strdisplaywidth(text))
-  return string.rep(" ", pad) .. text .. " "
+local function apply_colors()
+  vim.api.nvim_set_hl(0, "NvimTreeLineNr", { fg = COLORS.relative })
+  vim.api.nvim_set_hl(0, "NvimTreeCursorLineNr", { fg = COLORS.current })
 end
 
-M._format_num = format_num -- 暴露给测试/调试用
+-- 会话内开关状态：默认关闭
+local enabled = false
 
--- 当前行：显示绝对行号（深色）
-_G.NvimTreeNumCurrent = function()
-  if vim.v.virtnum ~= 0 or vim.v.relnum ~= 0 then
-    return ""
+local function tree_wins()
+  local wins = {}
+  for _, w in ipairs(vim.api.nvim_list_wins()) do
+    if vim.bo[vim.api.nvim_win_get_buf(w)].filetype == "NvimTree" then
+      wins[#wins + 1] = w
+    end
   end
-  return format_num(vim.v.lnum)
+  return wins
 end
 
--- 其余行：显示相对行号（浅色）
-_G.NvimTreeNumRelative = function()
-  if vim.v.virtnum ~= 0 or vim.v.relnum == 0 then
-    return ""
-  end
-  return format_num(vim.v.relnum)
+local function apply_numbers(win)
+  vim.wo[win].number = enabled
+  vim.wo[win].relativenumber = enabled
 end
 
-local STATUSCOLUMN = "%#NvimTreeCursorLineNr#%{v:lua.NvimTreeNumCurrent()}"
-  .. "%#NvimTreeLineNr#%{v:lua.NvimTreeNumRelative()}"
+---开关文件树行号（绝对 + 相对一次性切换），由 <leader>n 调用
+function M.toggle_numbers()
+  enabled = not enabled
 
--- windows 级选项，必须落在显示树的那个窗口上
-local function apply(win)
-  if win == -1 then
-    return
+  -- 同步写回 nvim-tree 自己的配置：否则每次打开树窗口，
+  -- 它都会用 config.view.number 的值（默认 false）重新设置窗口选项，把开关状态冲掉
+  local conf = require("nvim-tree.config").g
+  conf.view.number = enabled
+  conf.view.relativenumber = enabled
+
+  -- 已打开的树窗口立即生效
+  for _, w in ipairs(tree_wins()) do
+    apply_numbers(w)
   end
-  vim.wo[win].statuscolumn = STATUSCOLUMN
-  vim.wo[win].numberwidth = WIDTH
+
+  if #tree_wins() == 0 then
+    vim.notify(
+      ("文件树未打开；树行号已设为「%s」，打开文件树后生效"):format(enabled and "显示" or "隐藏"),
+      vim.log.levels.INFO
+    )
+  else
+    vim.notify(
+      ("文件树行号：%s（绝对 + 相对）"):format(enabled and "显示" or "隐藏"),
+      vim.log.levels.INFO
+    )
+  end
 end
 
 function M.setup()
-  -- 树 buffer 初次建立 filetype 时
-  vim.api.nvim_create_autocmd("FileType", {
-    pattern = "NvimTree",
-    callback = function(args)
-      apply(vim.fn.bufwinid(args.buf))
-    end,
+  apply_colors()
+
+  -- 换主题 / base46 重载后重新上色
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "NvThemeReload",
+    callback = apply_colors,
   })
 
-  -- 树窗口重新打开时（窗口销毁后窗口级选项会丢失）
+  -- 树窗口出现时套用当前开关状态（窗口级选项会随窗口销毁而丢失）
+  local function on_tree_win(args)
+    local win = vim.fn.bufwinid(args.buf)
+    if win == -1 then
+      return
+    end
+    -- 延后一帧再套用：nvim-tree 会在创建窗口的过程中用自身配置
+    -- （view-state 在启动时拷贝的 view.number/relativenumber）覆盖窗口选项
+    vim.schedule(function()
+      if vim.api.nvim_win_is_valid(win) then
+        apply_numbers(win)
+      end
+    end)
+  end
+
+  vim.api.nvim_create_autocmd("FileType", { pattern = "NvimTree", callback = on_tree_win })
   vim.api.nvim_create_autocmd("BufWinEnter", {
     callback = function(args)
       if vim.bo[args.buf].filetype == "NvimTree" then
-        apply(vim.fn.bufwinid(args.buf))
+        on_tree_win(args)
       end
     end,
   })
