@@ -6,10 +6,19 @@
 -- 所有行数均以 TUI 可见行（考虑 wrap 折行）为准。
 -- 小窗口保护：窗口可显示行数 <= MIN_WIN_HEIGHT 时自动停用本模块，
 -- 避免 4+4 行的保护占满整个窗口。
+--
+-- 与 snacks.scroll（平滑滚动动画）共存：
+--   动画期间 snacks 会把窗口的 'virtualedit' 临时设为 "all"，并用「屏幕行」
+--   （NH 命令）逐帧移动光标。此时若本模块调用 winrestview 改动 topline，
+--   动画后续帧的落点基准就会错位，表现为大数目行跳转（如 100j）后光标停在
+--   错误的行（看起来「只跳了几行」）。所以动画期间跳过调整，等动画结束后再补检一次。
 
 local PAD_BELOW = 4   -- 光标下方始终保留的视觉行数
 local PAD_ABOVE = 4   -- 光标上方尽量保留的视觉行数（到文件顶端时可少于此值）
 local MIN_WIN_HEIGHT = 10 -- 窗口可显示行数 <= 此值时停用本模块
+
+local RECHECK_DELAY = 40 -- 动画结束后补检查的间隔（毫秒）
+local RECHECK_MAX = 25   -- 最多重试次数（约 1 秒）
 
 -- 获取某 buffer-line（1-indexed）在指定窗口中占用的视觉行数
 local function visual_lines_of(winid, bufnr, lnum)
@@ -36,6 +45,13 @@ local function count_visual_lines(winid, bufnr, start_lnum, end_lnum)
   return total
 end
 
+-- 是否有平滑滚动动画正在进行（snacks.scroll 在动画期间临时设置 virtualedit=all）
+local function smooth_scroll_animating(win)
+  return vim.api.nvim_win_is_valid(win) and vim.wo[win].virtualedit == "all"
+end
+
+local schedule_recheck -- 前向声明：动画结束后补一次检查
+
 local function adjust_scroll()
   local winid = vim.api.nvim_get_current_win()
 
@@ -43,6 +59,12 @@ local function adjust_scroll()
   -- 此时上下 4 行的保护会占满窗口，直接交给原生滚动行为
   local win_height = vim.api.nvim_win_get_height(winid)
   if win_height <= MIN_WIN_HEIGHT then
+    return
+  end
+
+  -- 平滑滚动动画进行中：不要动视口，否则会打乱动画的落点基准
+  if smooth_scroll_animating(winid) then
+    schedule_recheck()
     return
   end
 
@@ -111,6 +133,31 @@ local function adjust_scroll()
       vim.fn.winrestview({ topline = new_topline, lnum = cursor_lnum })
     end
   end
+end
+
+-- 动画结束后补一次检查：动画期间跳过了调整，等视口稳定后把下方余量补上
+local rechecking = false
+schedule_recheck = function()
+  if rechecking then
+    return
+  end
+  rechecking = true
+  local tries = 0
+  local function step()
+    tries = tries + 1
+    local win = vim.api.nvim_get_current_win()
+    if not vim.api.nvim_win_is_valid(win) then
+      rechecking = false
+      return
+    end
+    if smooth_scroll_animating(win) and tries < RECHECK_MAX then
+      vim.defer_fn(step, RECHECK_DELAY)
+      return
+    end
+    rechecking = false
+    adjust_scroll()
+  end
+  vim.defer_fn(step, RECHECK_DELAY)
 end
 
 -- 禁用原生 scrolloff，完全由本模块接管
