@@ -59,6 +59,8 @@ return {
         "css-lsp",
         "pyright",
         "typescript-language-server",
+		"marksman",
+		"harper-ls",
         "clangd",
       },
     },
