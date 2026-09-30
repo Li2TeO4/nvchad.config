@@ -22,3 +22,12 @@ vim.api.nvim_create_autocmd("FileType", {
     end
   end,
 })
+
+-- 启动完成后在后台补齐 Mason 缺失的工具（mason.nvim 不支持 ensure_installed，见 configs/mason.lua）
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    require("configs.mason").ensure_installed()
+  end,
+})

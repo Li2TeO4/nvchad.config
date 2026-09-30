@@ -52,6 +52,9 @@ return {
   {
     "williamboman/mason.nvim",
     opts = {
+      -- 注意：这是 Mason 的「包名」，与 lspconfig 的服务器名不同
+      -- （如 bash-language-server → bashls、harper-ls → harper_ls）。
+      -- mason.nvim 自身不认这个选项，由 configs/mason.lua 在启动后补齐缺失项。
       ensure_installed = {
         "lua-language-server",
         "stylua",
@@ -59,9 +62,13 @@ return {
         "css-lsp",
         "pyright",
         "typescript-language-server",
-		"marksman",
-		"harper-ls",
         "clangd",
+        -- Markdown
+        "marksman",
+        "harper-ls",
+        -- Bash / Sh
+        "bash-language-server",
+        "shellcheck",
       },
     },
   },

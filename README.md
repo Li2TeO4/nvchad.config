@@ -35,7 +35,8 @@ lua/configs/keymaps.lua   ★ 你的通用键位（唯一出处，加键位改�
 lua/configs/function-keymaps.lua  行尾加分号/删末尾字符
 lua/configs/scrollpad.lua 自研非对称滚动（光标距底部 4 行自动滚屏）
 lua/configs/nvimtree.lua  文件树行号开关（<leader>n）与配色「改色口」
-lua/configs/lspconfig.lua LSP：启用 html / clangd / pyright（lua_ls 由 NvChad 默认启用）
+lua/configs/lspconfig.lua LSP：启用 html / clangd / pyright / marksman / harper_ls / bashls
+lua/configs/mason.lua     Mason 缺失工具自动补齐（mason.nvim 本身不支持 ensure_installed）
 lua/configs/dap.lua       DAP 核心：适配器、C/C++/Python 调试配置、断点符号
 lua/configs/dap-ui.lua    DAP UI 布局（左侧栏 + 底部 REPL）
 lua/configs/dap-keymaps.lua 调试键位（F 键 + <leader>d 系列）
@@ -152,14 +153,21 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 
 ### 6.1 已启用服务器
 
-| 语言 | 服务器 | 来源 |
-|---|---|---|
-| Lua | lua_ls | NvChad 默认启用 |
-| C/C++ | clangd | `lua/configs/lspconfig.lua` |
-| Python | pyright | 同上 |
-| HTML | html-lsp | 同上 |
+| 语言 | 服务器（lspconfig 名） | Mason 包名 | 来源 |
+|---|---|---|---|
+| Lua | `lua_ls` | lua-language-server | NvChad 默认启用 |
+| C/C++ | `clangd` | clangd | `lua/configs/lspconfig.lua` |
+| Python | `pyright` | pyright | 同上 |
+| HTML | `html` | html-lsp | 同上 |
+| Markdown | `marksman` | marksman | 同上（跨文件跳转标题/链接、补全） |
+| Markdown | `harper_ls` | harper-ls | 同上（语法/文风检查，注意是下划线） |
+| Bash / Sh | `bashls` | bash-language-server | 同上（配合 shellcheck 出诊断） |
 
-（Mason 里还装了 json-lsp、neocmakelsp、stylua，可按需在 lspconfig.lua 中追加。）
+> ⚠ **名字务必区分**：`vim.lsp.enable({...})` 里写的是 **lspconfig 的服务器名**（`lua_ls`、`harper_ls`、`bashls`），
+> 而 Mason 装的是**包名**（`lua-language-server`、`harper-ls`、`bash-language-server`）。
+> 写错不会报错，但服务器会静默不启动。
+
+（Mason 里还装了 json-lsp、neocmakelsp、stylua、shellcheck，可按需在 lspconfig.lua 中追加。）
 
 ### 6.2 键位（LSP attach 到 buffer 后生效）
 
@@ -181,7 +189,11 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 ### 6.3 管理服务器
 
 - `:Mason` 打开安装面板：`i` 安装、`X` 卸载、`U` 更新、`g?` 查看全部操作。
-- 新增语言：先在 `lua/configs/lspconfig.lua` 的 `vim.lsp.enable({...})` 列表中加入服务器名，再用 Mason 安装对应工具。
+- **自动补齐**：`mason.nvim` 的 setup() 其实并不支持 `ensure_installed` 选项，所以
+  `plugins/init.lua` 里那份列表本来不会自动装东西；现在由 `lua/configs/mason.lua` 在启动后
+  （`VeryLazy`）检查并在后台补齐缺失工具，列表仍是单一来源（`plugins/init.lua` 的 mason opts）。
+- 新增语言：① 在 `lua/configs/lspconfig.lua` 的 `vim.lsp.enable({...})` 里加**服务器名**；
+  ② 在 `plugins/init.lua` 的 mason `ensure_installed` 里加**Mason 包名**（下次启动自动安装）。
 
 ### 6.4 clangd 特别说明
 
