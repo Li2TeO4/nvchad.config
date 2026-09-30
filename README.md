@@ -13,7 +13,7 @@
 | which-key 菜单 | 按一下 `<leader>`（空格）稍等 | 弹出当前可用键位分组菜单 |
 | which-key 总览 | `<leader>wK` | 列出所有键位 |
 | NvChad 键位速查表 | `<leader>ch` | 内置 cheatsheet（grid 布局，再按一次关闭） |
-| 本文件（README） | `<leader>?` | 随时以**只读 + 渲染**模式打开这份使用说明（已打开则直接跳过去）；最全速查表在文末第 14 节 |
+| 本文件（README） | `<leader>?` | 随时以**只读 + 渲染 + 不挂 LSP** 模式打开这份使用说明（已打开则直接跳过去）；最全速查表在文末第 14 节 |
 
 **按键记号**：`<leader>` = 空格，`<C-x>` = Ctrl+x，`<A-x>` = Alt+x，`<S-x>` = Shift+x，`<CR>` = 回车。
 
@@ -167,6 +167,9 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 > 而 Mason 装的是**包名**（`lua-language-server`、`harper-ls`、`bash-language-server`）。
 > 写错不会报错，但服务器会静默不启动。
 
+> 💡 Markdown 里那些**粉色提示**来自 `harper_ls`（语法/文风检查）。觉得吵时按 **`<leader>H`** 一键关闭，
+> 再按一次开启；关闭后所有 buffer 都不再挂 harper_ls。
+
 （Mason 里还装了 json-lsp、neocmakelsp、stylua、shellcheck，可按需在 lspconfig.lua 中追加。）
 
 ### 6.2 键位（LSP attach 到 buffer 后生效）
@@ -181,6 +184,7 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 | `[d` / `]d` | 上一个 / 下一个诊断（Neovim 0.12 内置） |
 | `<C-w>d` | 悬浮显示光标处诊断详情（内置） |
 | `<leader>ds` | 诊断列表（loclist）——⚠ DAP 加载后此键被 DAP 的"查看作用域"覆盖，见 10.3 |
+| `<leader>H` | 开关 harper_ls（Markdown 语法/文风检查） |
 
 > ⚠ NvChad v2.5 没有绑定 `K`（悬浮文档）、`gr`（引用）、`gi`（实现）。
 > 需要时自行映射或在命令里用：
@@ -441,6 +445,7 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | LSP | `gd` / `gD` / `<leader>D` | 定义 / 声明 / 类型定义 |
 | LSP | `<leader>ra` | 重命名 |
 | LSP | `[d` / `]d` / `<C-w>d` | 诊断导航 / 悬浮诊断 |
+| LSP | `<leader>H` | harper_ls（Markdown 风检）开关 |
 | 补全 | `<CR>` / `<Tab>` / `<S-Tab>` | 确认 / 确认 / 上一项 |
 | Git | `]h` / `[h` / `<leader>hs` / `<leader>hr` | hunk 导航 / 暂存 / 重置 |
 | Git | `<leader>gb` / `<leader>gd` | blame / diff |

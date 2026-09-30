@@ -64,14 +64,59 @@ keymap.set("n", "<leader>mD", function()
   vim.notify("已删除全部标记", vim.log.levels.INFO)
 end, { desc = "删除全部标记" })
 
+-- ── LSP 相关快捷操作 ──
+
+-- harper_ls（Markdown 语法/文风检查）一键开关：
+-- 关闭时停掉所有 harper_ls 客户端；再按一次重新启用
+-- （vim.lsp.enable(name, true) 会给已打开的 buffer 重新挂载）
+local function toggle_harper()
+  local name = "harper_ls"
+  if vim.lsp.is_enabled(name) then
+    vim.lsp.enable(name, false)
+    vim.notify("harper_ls：已关闭（Markdown 语法/文风检查静默）", vim.log.levels.INFO)
+  else
+    vim.lsp.enable(name, true)
+    vim.notify("harper_ls：已开启", vim.log.levels.INFO)
+  end
+end
+
+keymap.set("n", "<leader>H", toggle_harper, { desc = "harper_ls 语法/文风检查开关" })
+
+-- 把某 buffer 上的 LSP 客户端摘掉（不影响其它 buffer 上的同一服务器）
+local function detach_lsp(buf)
+  for _, client in ipairs(vim.lsp.get_clients { bufnr = buf }) do
+    vim.lsp.buf_detach_client(buf, client.id)
+  end
+end
+
+-- 文档阅读模式（<leader>?）下不挂任何 LSP：
+-- 给 buffer 打标记后，不仅立刻摘掉已有客户端，之后新来的（例如重新启用
+-- harper_ls 触发的 FileType 重挂）也会被摘掉。
+-- 注意：LspAttach 触发时客户端还在挂载过程中，此刻直接 detach 无效，
+-- 需要延后一帧等挂载完成再摘。
+vim.api.nvim_create_autocmd("LspAttach", {
+  callback = function(args)
+    if not vim.b[args.buf].doc_readonly then
+      return
+    end
+    local buf, client_id = args.buf, args.data.client_id
+    vim.schedule(function()
+      if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].doc_readonly then
+        pcall(vim.lsp.buf_detach_client, buf, client_id)
+      end
+    end)
+  end,
+})
+
 -- 快速查看本配置的 README 使用说明：
 -- 未打开时在新标签页打开；已打开则直接聚焦对应窗口，避免重复开页
--- 打开后以只读模式查看（render-markdown 直接渲染）
+-- 打开后以只读模式查看（render-markdown 直接渲染），并且不挂 LSP
 local function open_readme()
   local path = vim.fn.stdpath("config") .. "/README.md"
   local buf = vim.fn.bufnr(path)
   if buf == -1 then
     vim.cmd("tabnew " .. vim.fn.fnameescape(path))
+    buf = vim.api.nvim_get_current_buf()
   else
     -- bufwinid 只搜当前标签页，用 win_findbuf 跨标签页找窗口
     local wins = vim.fn.win_findbuf(buf)
@@ -83,8 +128,11 @@ local function open_readme()
     end
   end
   -- 只读模式：禁止修改，防止误编辑配置文档
-  vim.bo.modifiable = false
-  vim.bo.readonly = true
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].readonly = true
+  -- 纯阅读：不挂 LSP（避免语法/文风提示干扰阅读）
+  vim.b[buf].doc_readonly = true
+  detach_lsp(buf)
 end
 
 keymap.set("n", "<leader>?", open_readme, { desc = "打开配置 README（只读渲染）" })
