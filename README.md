@@ -185,6 +185,7 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 | `<C-w>d` | 悬浮显示光标处诊断详情（内置） |
 | `<leader>ds` | 诊断列表（loclist）——⚠ DAP 加载后此键被 DAP 的"查看作用域"覆盖，见 10.3 |
 | `<leader>H` | 开关 harper_ls（Markdown 语法/文风检查） |
+| `<leader>ls` | 静音诊断提示：隐藏黄(WARN)/紫(HINT)/绿(INFO)的行内文字、下划线与行号旁图标，只留红色 ERROR；**LSP 服务不受影响**，再按一次恢复 |
 
 > ⚠ NvChad v2.5 没有绑定 `K`（悬浮文档）、`gr`（引用）、`gi`（实现）。
 > 需要时自行映射或在命令里用：
@@ -446,6 +447,7 @@ clangd 依赖 `compile_commands.json` 才能正确解析头文件路径：
 | LSP | `<leader>ra` | 重命名 |
 | LSP | `[d` / `]d` / `<C-w>d` | 诊断导航 / 悬浮诊断 |
 | LSP | `<leader>H` | harper_ls（Markdown 风检）开关 |
+| LSP | `<leader>ls` | 静音诊断提示（黄/紫，保留 ERROR） |
 | 补全 | `<CR>` / `<Tab>` / `<S-Tab>` | 确认 / 确认 / 上一项 |
 | Git | `]h` / `[h` / `<leader>hs` / `<leader>hr` | hunk 导航 / 暂存 / 重置 |
 | Git | `<leader>gb` / `<leader>gd` | blame / diff |

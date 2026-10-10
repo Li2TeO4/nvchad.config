@@ -82,6 +82,53 @@ end
 
 keymap.set("n", "<leader>H", toggle_harper, { desc = "harper_ls 语法/文风检查开关" })
 
+-- 诊断提示一键静音（黄色警告 / 紫色提示 / 绿色信息）
+--
+-- 只改「显示」：把以下三项的 severity 下限提到 ERROR，于是黄色(WARN)、紫色(HINT)、
+-- 绿色(INFO) 的行内文字、下划线和行号旁标记都不再渲染，只留红色 ERROR。
+-- LSP 服务与诊断数据完全不受影响：[d/]d 跳转、<leader>ds 诊断列表、<C-w>d 悬浮详情照常可用。
+-- 再按一次恢复原样（恢复的是切换前保存的配置，因此 NvChad 的图标/前缀都保留）。
+local diag_quiet = false
+local diag_saved = nil
+
+local function with_min_severity(orig, min_sev)
+  if orig == false then
+    return false -- 原本就关闭，保持关闭
+  end
+  local base = type(orig) == "table" and orig or {}
+  return vim.tbl_extend("force", base, { severity = { min = min_sev } })
+end
+
+local function toggle_diagnostic_display()
+  local x = vim.diagnostic.severity
+
+  if not diag_quiet then
+    local cur = vim.diagnostic.config() or {}
+    diag_saved = {
+      virtual_text = cur.virtual_text,
+      signs = cur.signs,
+      underline = cur.underline,
+    }
+    vim.diagnostic.config({
+      virtual_text = with_min_severity(diag_saved.virtual_text, x.ERROR),
+      signs = with_min_severity(diag_saved.signs, x.ERROR),
+      underline = with_min_severity(diag_saved.underline, x.ERROR),
+    })
+    vim.notify("已静音诊断提示：只保留红色 ERROR（LSP 服务照常运行）", vim.log.levels.INFO)
+  else
+    vim.diagnostic.config({
+      virtual_text = diag_saved.virtual_text,
+      signs = diag_saved.signs,
+      underline = diag_saved.underline,
+    })
+    vim.notify("已恢复诊断提示（黄色警告 / 紫色提示重新显示）", vim.log.levels.INFO)
+  end
+
+  diag_quiet = not diag_quiet
+end
+
+keymap.set("n", "<leader>ls", toggle_diagnostic_display, { desc = "静音诊断提示（黄/紫，保留 ERROR）" })
+
 -- 把某 buffer 上的 LSP 客户端摘掉（不影响其它 buffer 上的同一服务器）
 local function detach_lsp(buf)
   for _, client in ipairs(vim.lsp.get_clients { bufnr = buf }) do
