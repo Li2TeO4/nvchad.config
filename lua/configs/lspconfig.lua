@@ -18,3 +18,9 @@ vim.lsp.enable({
 	"harper_ls", -- Markdown 语法/文风检查（注意是下划线）
 	"bashls", -- Bash / Sh（配合 shellcheck 出诊断）
 })
+
+-- clangd 默认把每条 RPC 都打到 stderr，而 Neovim 会把服务器 stderr 记进 lsp.log，
+-- 结果日志能涨到几十 MB（实测 59MB），浪费磁盘。把 clangd 日志级别降到 error。
+vim.lsp.config("clangd", {
+	cmd = { "clangd", "--log=error" },
+})
