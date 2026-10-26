@@ -64,6 +64,45 @@ keymap.set("n", "<leader>mD", function()
   vim.notify("已删除全部标记", vim.log.levels.INFO)
 end, { desc = "删除全部标记" })
 
+-- ── 绝对行号跳转：复用标记键（数字在前，走 Vim 原生 count）──
+--   42`  → 跳到第 42 行第 0 列（对应 ` 的「精确列」语义）
+--   42'  → 跳到第 42 行行首非空字符（对应 ' 的「行首」语义）
+-- 不带数字时完全保持原标记跳转：`a / 'a / `' / '' / '. / '< / '[ …
+-- 数字标记（'0 – '9）按需求砍掉：在键后输入数字会提示改成「数字在前」的写法。
+local function jump_line_or_mark(key)
+  local n = vim.v.count
+
+  -- 有数字前缀 → 跳行
+  if n > 0 then
+    n = math.max(1, math.min(n, vim.fn.line "$"))
+    if key == "'" then
+      vim.cmd("normal! " .. n .. "G^") -- 行首非空
+    else
+      vim.api.nvim_win_set_cursor(0, { n, 0 }) -- 列 0
+    end
+    return
+  end
+
+  -- 无数字 → 按原样跳标记：读一个字符交给 :normal! 执行
+  local c = vim.fn.getcharstr()
+  if c == "" or c == "\27" then
+    return -- ESC / 无输入：取消
+  end
+  if c:match "^%d$" then
+    vim.notify('行号请写在按键前面，例如 42' .. key, vim.log.levels.WARN)
+    return
+  end
+  pcall(vim.cmd, "normal! " .. key .. c)
+end
+
+keymap.set("n", "`", function()
+  jump_line_or_mark "`"
+end, { desc = "跳转：42` 跳行 / `a 跳标记" })
+
+keymap.set("n", "'", function()
+  jump_line_or_mark "'"
+end, { desc = "跳转：42' 跳行首 / 'a 跳标记" })
+
 -- ── LSP 相关快捷操作 ──
 
 -- harper_ls（Markdown 语法/文风检查）一键开关：
