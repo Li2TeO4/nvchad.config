@@ -31,3 +31,15 @@ vim.api.nvim_create_autocmd("User", {
     require("configs.mason").ensure_installed()
   end,
 })
+
+-- 预加载 which-key：它平时靠按键懒加载，第一次按 ' 时来不及接管，标记列表提示要按第二次才出现。
+-- 提前加载好，第一次按 ' / ` 就能看到提示（启动开销很小）。
+vim.api.nvim_create_autocmd("User", {
+  pattern = "VeryLazy",
+  once = true,
+  callback = function()
+    pcall(function()
+      require("lazy").load({ plugins = { "which-key.nvim" } })
+    end)
+  end,
+})
