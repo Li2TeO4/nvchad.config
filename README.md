@@ -13,7 +13,7 @@
 | which-key 菜单 | 按一下 `<leader>`（空格）稍等 | 弹出当前可用键位分组菜单 |
 | which-key 总览 | `<leader>wK` | 列出所有键位 |
 | NvChad 键位速查表 | `<leader>ch` | 内置 cheatsheet（grid 布局，再按一次关闭） |
-| 本文件（README） | `<leader>?` | 随时以**只读 + 渲染 + 不挂 LSP** 模式打开这份使用说明（已打开则直接跳过去）；最全速查表在文末第 14 节 |
+| 本文件（README） | `<leader>?` | 随时以**只读 + 渲染 + 不挂 LSP + 无任何提示**（诊断/inlay hints 全清）模式打开这份使用说明（已打开则直接跳过去）；最全速查表在文末第 14 节 |
 
 **按键记号**：`<leader>` = 空格，`<C-x>` = Ctrl+x，`<A-x>` = Alt+x，`<S-x>` = Shift+x，`<CR>` = 回车。
 

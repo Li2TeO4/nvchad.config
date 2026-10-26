@@ -136,6 +136,55 @@ local function detach_lsp(buf)
   end
 end
 
+-- 清空某 buffer 的所有「提示」：
+--   · 诊断（黄/紫/红行内文字、下划线、行号旁图标）
+--   · inlay hints（行内参数/类型提示）
+-- 注意：reset 自身会再触发 DiagnosticChanged，所以用防重入标记避免死循环；
+-- 标记释放时若仍有残留则再清一次（自愈）。
+local clearing = {}
+
+local function clear_hints_now(buf)
+  if clearing[buf] then
+    return
+  end
+  clearing[buf] = true
+  pcall(vim.diagnostic.reset, nil, buf)
+  pcall(function()
+    vim.lsp.inlay_hint.enable(false, { bufnr = buf })
+  end)
+  vim.defer_fn(function()
+    clearing[buf] = nil
+    if
+      vim.api.nvim_buf_is_valid(buf)
+      and vim.b[buf].doc_readonly
+      and #vim.diagnostic.get(buf) > 0
+    then
+      clear_hints_now(buf)
+    end
+  end, 100)
+end
+
+-- 阅读模式下任何后到的诊断都立刻清掉（客户端摘除是异步的，推送可能在摘除之后才到）
+vim.api.nvim_create_autocmd("DiagnosticChanged", {
+  callback = function(args)
+    if vim.b[args.buf].doc_readonly then
+      clear_hints_now(args.buf)
+    end
+  end,
+})
+
+-- 打开 / 重新聚焦阅读窗口时也主动清一次（并延迟补几轮，覆盖慢速推送）
+local function clear_hints(buf)
+  clear_hints_now(buf)
+  for i = 1, 4 do
+    vim.defer_fn(function()
+      if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].doc_readonly then
+        clear_hints_now(buf)
+      end
+    end, 200 * i)
+  end
+end
+
 -- 文档阅读模式（<leader>?）下不挂任何 LSP：
 -- 给 buffer 打标记后，不仅立刻摘掉已有客户端，之后新来的（例如重新启用
 -- harper_ls 触发的 FileType 重挂）也会被摘掉。
@@ -150,6 +199,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
     vim.schedule(function()
       if vim.api.nvim_buf_is_valid(buf) and vim.b[buf].doc_readonly then
         pcall(vim.lsp.buf_detach_client, buf, client_id)
+        clear_hints(buf) -- 客户端可能已经推了诊断，摘掉后再清一次
       end
     end)
   end,
@@ -177,9 +227,10 @@ local function open_readme()
   -- 只读模式：禁止修改，防止误编辑配置文档
   vim.bo[buf].modifiable = false
   vim.bo[buf].readonly = true
-  -- 纯阅读：不挂 LSP（避免语法/文风提示干扰阅读）
+  -- 纯阅读：不挂 LSP，并清空所有提示（诊断 + inlay hints）
   vim.b[buf].doc_readonly = true
   detach_lsp(buf)
+  clear_hints(buf)
 end
 
 keymap.set("n", "<leader>?", open_readme, { desc = "打开配置 README（只读渲染）" })
