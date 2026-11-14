@@ -200,16 +200,25 @@ end
 -- 删除若干块（一次 nvim_buf_set_lines，单步撤销）
 -- 返回删除前的记忆项列表（供恢复）
 --------------------------------------------------------------------------------
-local function remove_blocks(bufnr, scan_data, blocks, keep_full_line)
+-- 去掉块注释的「标记」（/* 与 */，连同一个格式空格），**保留标记之间的内容**
+-- 例：for (...i++/*, j++*/);        → for (...i++, j++);   （内容变成可执行代码）
+--     /* int tmp = 9; */           → int tmp = 9;
+--     printf("x"); /*note*/ // x   → printf("x"); note // x
+-- 返回记忆项（整行原件），供 <leader>. 原样恢复
+local function strip_blocks(bufnr, scan_data, blocks)
   if #blocks == 0 then
     return {}
   end
 
   local lines = scan_data.lines
   local first, last = math.huge, -1
+  local touched = {}
   for _, b in ipairs(blocks) do
     first = math.min(first, b.sl)
     last = math.max(last, b.el)
+    for i = b.sl, b.el do
+      touched[i] = lines[i]
+    end
   end
 
   local region = {}
@@ -217,52 +226,48 @@ local function remove_blocks(bufnr, scan_data, blocks, keep_full_line)
     region[#region + 1] = lines[i]
   end
   local text = table.concat(region, "\n")
-
-  -- 每块在区域文本里的 0-based 偏移（块文本是连续的，长度即跨度）
   local prefix = { [first] = 0 }
   for i = first, last - 1 do
     prefix[i + 1] = prefix[i] + #lines[i] + 1
   end
 
-  local spans, items = {}, {}
+  -- 代码里的块：只删开/闭标记（保留内容）
+  -- // 行注释里的内嵌块：整块删除（这类是"临时变体值"笔记，不是代码，
+  --   例：// for(i = 0/*i = 1*/; ...) → // for(i = 0; ...)）
+  local removals = {}
   for _, b in ipairs(blocks) do
     local s_off = prefix[b.sl] + b.sc
     local btext = block_text(scan_data, b)
-    local replacement = ""
-
-    -- 整行块（/* 覆盖整行内容）：只剥标记、保留内容 → 取消注释
-    if keep_full_line and b.sl == b.el then
-      local line = lines[b.sl]
-      if b.sc == indent_len(line) and b.ec >= rstrip_len(line) then
-        local inner = btext:gsub("^/%*%s*", ""):gsub("%s*%*/$", "")
-        replacement = inner
-      end
-    end
-
-    spans[#spans + 1] = { s_off, s_off + #btext, replacement }
-    -- 真正「删掉」的块才进记忆（剥标记的可以靠再按一次重新包裹）
-    if replacement == "" then
-      items[#items + 1] = { sl = b.sl, sc = b.sc, el = b.el, ec = b.ec, text = btext }
+    local e_off = s_off + #btext
+    local lc = scan_data.line_comments[b.sl]
+    local inside_line_comment = b.sl == b.el and lc ~= nil and lc < b.sc
+    if inside_line_comment then
+      removals[#removals + 1] = { s_off, e_off } -- 整块删
+    else
+      local open_len = (btext:sub(1, 3) == "/* ") and 3 or 2
+      local close_len = (btext:sub(-3) == " */") and 3 or 2
+      removals[#removals + 1] = { s_off, s_off + open_len }
+      removals[#removals + 1] = { e_off - close_len, e_off }
     end
   end
 
-  -- 从后往前替换，偏移保持有效
-  table.sort(spans, function(a, b)
+  -- 从后往前删，偏移保持有效
+  table.sort(removals, function(a, b)
     return a[1] > b[1]
   end)
-  for _, sp in ipairs(spans) do
-    text = text:sub(1, sp[1]) .. sp[3] .. text:sub(sp[2] + 1)
+  for _, r in ipairs(removals) do
+    text = text:sub(1, r[1]) .. text:sub(r[2] + 1)
   end
 
-  local new_lines = vim.split(text, "\n", { plain = true })
-  vim.api.nvim_buf_set_lines(bufnr, first - 1, last, false, new_lines)
+  vim.api.nvim_buf_set_lines(bufnr, first - 1, last, false, vim.split(text, "\n", { plain = true }))
 
-  table.sort(items, function(a, b)
-    if a.sl ~= b.sl then
-      return a.sl < b.sl
+  -- 记住受影响行的原件：<leader>. 再次按下可原样包回去
+  local items = {}
+  for i = first, last do
+    if touched[i] then
+      items[#items + 1] = { kind = "line", sl = i, sc = 0, el = i, text = touched[i] }
     end
-    return a.sc < b.sc
-  end)
+  end
   return items
 end
 
@@ -382,7 +387,7 @@ function M.slash_normal()
 
   -- 1) 有 /* */ → 全删
   if #blocks > 0 then
-    local items = remove_blocks(bufnr, sd, blocks, true)
+    local items = strip_blocks(bufnr, sd, blocks)
     remember(bufnr, lnum, items)
     return
   end
@@ -417,7 +422,7 @@ function M.dot_normal()
   -- 1) 光标落在某个块内 → 只删它
   for _, b in ipairs(blocks) do
     if cursor_in_block(b, lnum, col0) then
-      local items = remove_blocks(bufnr, sd, { b }, true)
+      local items = strip_blocks(bufnr, sd, { b })
       remember(bufnr, lnum, items)
       return
     end
@@ -425,7 +430,7 @@ function M.dot_normal()
 
   -- 2) 本行有块 → 全删
   if #blocks > 0 then
-    local items = remove_blocks(bufnr, sd, blocks, true)
+    local items = strip_blocks(bufnr, sd, blocks)
     remember(bufnr, lnum, items)
     return
   end
