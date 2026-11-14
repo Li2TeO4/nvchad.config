@@ -11,3 +11,10 @@ require("configs.cmake-dap-helper")
 vim.keymap.set("n", "<leader>n", function()
   require("configs.nvimtree").toggle_numbers()
 end, { desc = "文件树行号开关（绝对 + 相对）" })
+
+-- C/C++ 专用注释键位：<leader>/、<leader>.、<leader>,
+-- 必须写在 require "nvchad.mappings" 之后：NvChad 默认把 <leader>/ 映射成 gcc/gc，
+-- 而 mappings.lua 是在 vim.schedule 里加载的，晚于 configs/keymaps.lua，
+-- 所以只能在这里覆盖。
+-- 逻辑见 lua/configs/c-comment.lua（非 c/cpp 自动回落到 Comment.nvim）
+require("configs.c-comment").setup()

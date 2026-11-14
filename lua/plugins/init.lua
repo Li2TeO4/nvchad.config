@@ -179,8 +179,10 @@ return {
     "numToStr/Comment.nvim",
     -- stylua: ignore
     keys = {
-      { "<leader>/", function() require("Comment.api").toggle.linewise.current() end,	mode = "n", desc = "[Comment] Comment current line", },
-      { "<leader>/", "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", mode = "v", desc = "Comment current line",           },
+      -- <leader>/ 与 <leader>. 已改由 lua/configs/c-comment.lua 接管（C/C++ 的 /* */ 逻辑），
+      -- 这里先注释掉，避免与自定义映射打架；需要恢复 Comment.nvim 原行为时取消注释即可。
+      -- { "<leader>/", function() require("Comment.api").toggle.linewise.current() end,	mode = "n", desc = "[Comment] Comment current line", },
+      -- { "<leader>/", "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", mode = "v", desc = "Comment current line",           },
       -- control + / keymappings
       { "<C-_>",     function() require("Comment.api").toggle.linewise.current() end,	mode = "n", desc = "[Comment] Comment current line", },
       { "<C-_>",     "<esc><cmd>lua require('Comment.api').toggle.linewise(vim.fn.visualmode())<cr>", mode = "v", desc = "Comment current line",           },
