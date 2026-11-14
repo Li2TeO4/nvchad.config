@@ -181,6 +181,11 @@ local function block_text(scan_data, b)
   return table.concat(parts, "\n")
 end
 
+-- 去掉行尾空白（返回 去掉后的长度，0-based 的半开位置）
+local function rstrip_len(line)
+  return #(line:gsub("%s+$", ""))
+end
+
 -- 第一个非空白列的 0-based 偏移
 local function indent_len(line)
   return #(line:match("^%s*") or "")
@@ -195,7 +200,7 @@ end
 -- 删除若干块（一次 nvim_buf_set_lines，单步撤销）
 -- 返回删除前的记忆项列表（供恢复）
 --------------------------------------------------------------------------------
-local function remove_blocks(bufnr, scan_data, blocks)
+local function remove_blocks(bufnr, scan_data, blocks, keep_full_line)
   if #blocks == 0 then
     return {}
   end
@@ -223,22 +228,35 @@ local function remove_blocks(bufnr, scan_data, blocks)
   for _, b in ipairs(blocks) do
     local s_off = prefix[b.sl] + b.sc
     local btext = block_text(scan_data, b)
-    spans[#spans + 1] = { s_off, s_off + #btext }
-    items[#items + 1] = { sl = b.sl, sc = b.sc, el = b.el, ec = b.ec, text = btext }
+    local replacement = ""
+
+    -- 整行块（/* 覆盖整行内容）：只剥标记、保留内容 → 取消注释
+    if keep_full_line and b.sl == b.el then
+      local line = lines[b.sl]
+      if b.sc == indent_len(line) and b.ec >= rstrip_len(line) then
+        local inner = btext:gsub("^/%*%s*", ""):gsub("%s*%*/$", "")
+        replacement = inner
+      end
+    end
+
+    spans[#spans + 1] = { s_off, s_off + #btext, replacement }
+    -- 真正「删掉」的块才进记忆（剥标记的可以靠再按一次重新包裹）
+    if replacement == "" then
+      items[#items + 1] = { sl = b.sl, sc = b.sc, el = b.el, ec = b.ec, text = btext }
+    end
   end
 
-  -- 从后往前删，偏移保持有效
+  -- 从后往前替换，偏移保持有效
   table.sort(spans, function(a, b)
     return a[1] > b[1]
   end)
   for _, sp in ipairs(spans) do
-    text = text:sub(1, sp[1]) .. text:sub(sp[2] + 1)
+    text = text:sub(1, sp[1]) .. sp[3] .. text:sub(sp[2] + 1)
   end
 
   local new_lines = vim.split(text, "\n", { plain = true })
   vim.api.nvim_buf_set_lines(bufnr, first - 1, last, false, new_lines)
 
-  -- 记忆项按文档顺序排好（恢复时从后往前插）
   table.sort(items, function(a, b)
     if a.sl ~= b.sl then
       return a.sl < b.sl
@@ -303,11 +321,6 @@ local function strip_wrap(line, s0)
   return pre .. kept .. after
 end
 
--- 去掉行尾空白（返回 去掉后的长度，0-based 的半开位置）
-local function rstrip_len(line)
-  return #(line:gsub("%s+$", ""))
-end
-
 --------------------------------------------------------------------------------
 -- 对外操作
 --------------------------------------------------------------------------------
@@ -369,7 +382,7 @@ function M.slash_normal()
 
   -- 1) 有 /* */ → 全删
   if #blocks > 0 then
-    local items = remove_blocks(bufnr, sd, blocks)
+    local items = remove_blocks(bufnr, sd, blocks, true)
     remember(bufnr, lnum, items)
     return
   end
@@ -404,7 +417,7 @@ function M.dot_normal()
   -- 1) 光标落在某个块内 → 只删它
   for _, b in ipairs(blocks) do
     if cursor_in_block(b, lnum, col0) then
-      local items = remove_blocks(bufnr, sd, { b })
+      local items = remove_blocks(bufnr, sd, { b }, true)
       remember(bufnr, lnum, items)
       return
     end
@@ -412,7 +425,7 @@ function M.dot_normal()
 
   -- 2) 本行有块 → 全删
   if #blocks > 0 then
-    local items = remove_blocks(bufnr, sd, blocks)
+    local items = remove_blocks(bufnr, sd, blocks, true)
     remember(bufnr, lnum, items)
     return
   end
