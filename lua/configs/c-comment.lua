@@ -238,15 +238,9 @@ local function strip_blocks(bufnr, scan_data, blocks)
     local s_off = prefix[b.sl] + b.sc
     local btext = block_text(scan_data, b)
     local e_off = s_off + #btext
-    -- 最多各删一个「格式空格」；块太短（如 /* */、/**/）时只删标记本身，
-    -- 否则两侧删除区间会重叠、把内容一起吞掉（a/* */b 曾被删成 a）
-    local open_len = (btext:sub(1, 3) == "/* ") and 3 or 2
-    local close_len = (btext:sub(-3) == " */") and 3 or 2
-    if open_len + close_len > #btext then
-      open_len, close_len = 2, 2
-    end
-    removals[#removals + 1] = { s_off, s_off + open_len }
-    removals[#removals + 1] = { e_off - close_len, e_off }
+    -- 只删 /* 与 */ 本身，不加也不删空格（与 wrap_range 完全互逆）
+    removals[#removals + 1] = { s_off, s_off + 2 }
+    removals[#removals + 1] = { e_off - 2, e_off }
   end
 
   -- 从后往前删，偏移保持有效
@@ -272,19 +266,11 @@ end
 --------------------------------------------------------------------------------
 -- 包裹 / 解包（在指定列插 /* 与 */）
 --------------------------------------------------------------------------------
--- 把 [s0, e0) 这一段包成 /* ... */（e0 省略表示到行尾）
+-- 把 [s0, e0) 这一段包成 /*...*/（e0 省略表示到行尾）
+-- 只加标记、不加空格：与去注释完全互逆，不会吞掉或新增空白
 local function wrap_range(line, s0, e0)
   local endpos = e0 or #line
-  local pre = line:sub(1, s0)
-  local raw = line:sub(s0 + 1, endpos)
-  local content = raw:match "^%s*(.-)%s*$"
-  local pad = (raw:match "%s*$" or "") ~= "" and " " or "" -- 区间末尾空白：折叠成一个空格
-  local tail = line:sub(endpos + 1)
-  if content == "" then
-    -- 空行/纯缩进行：直接一对 /* */，丢掉尾部空白
-    return pre .. "/* */"
-  end
-  return pre .. "/* " .. content .. " */" .. pad .. tail
+  return line:sub(1, s0) .. "/*" .. line:sub(s0 + 1, endpos) .. "*/" .. line:sub(endpos + 1)
 end
 
 -- s0 之后第一个非空白是否正好是 /* ... */；是则返回 /* 的 0-based 位置
@@ -302,26 +288,19 @@ local function wrapped_at(line, s0)
   return p
 end
 
--- 解包：去掉落 s0 处的 "/* "（或 "/*"）与其后第一个 "*/"（含前面一个空格）
+-- 解包：只去掉 s0 处的 "/*" 与其后第一个 "*/"，不动任何空格（与 wrap_range 互逆）
 local function strip_wrap(line, s0)
   local pre = line:sub(1, s0)
   local rest = line:sub(s0 + 1)
-  local body
-  if rest:sub(1, 3) == "/* " then
-    body = rest:sub(4)
-  elseif rest:sub(1, 2) == "/*" then
-    body = rest:sub(3)
-  else
+  if rest:sub(1, 2) ~= "/*" then
     return nil
   end
+  local body = rest:sub(3)
   local p = body:find("*/", 1, true)
   if not p then
     return nil
   end
-  local before = body:sub(p - 1, p - 1)
-  local after = body:sub(p + 2)
-  local kept = before == " " and body:sub(1, p - 2) or body:sub(1, p - 1)
-  return pre .. kept .. after
+  return pre .. body:sub(1, p - 1) .. body:sub(p + 2)
 end
 
 --------------------------------------------------------------------------------
