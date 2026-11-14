@@ -238,8 +238,13 @@ local function strip_blocks(bufnr, scan_data, blocks)
     local s_off = prefix[b.sl] + b.sc
     local btext = block_text(scan_data, b)
     local e_off = s_off + #btext
+    -- 最多各删一个「格式空格」；块太短（如 /* */、/**/）时只删标记本身，
+    -- 否则两侧删除区间会重叠、把内容一起吞掉（a/* */b 曾被删成 a）
     local open_len = (btext:sub(1, 3) == "/* ") and 3 or 2
     local close_len = (btext:sub(-3) == " */") and 3 or 2
+    if open_len + close_len > #btext then
+      open_len, close_len = 2, 2
+    end
     removals[#removals + 1] = { s_off, s_off + open_len }
     removals[#removals + 1] = { e_off - close_len, e_off }
   end
