@@ -7,7 +7,7 @@
 --   * <leader>. 优先级：消光标处 /* */  →  消本行所有 /* */  →  恢复上次删的 /* */
 --                        →  消整行 //  →  整行加 /* */
 --   * visual 一律「逐行块」：每行只包自己选区内的部分（每行都能单独取消）
---   * // 注释文本里嵌的 /* */（如 // for(i = 0/*i = 1*/; ...)）也要能消/恢复
+--   * 严格只增删标记（/* */ 与 //），标记之间的内容一律保留
 --
 -- 扫描器不依赖 treesitter（本机没装解析器），自己按 C 词法跳过字符串/字符字面量。
 
@@ -231,24 +231,17 @@ local function strip_blocks(bufnr, scan_data, blocks)
     prefix[i + 1] = prefix[i] + #lines[i] + 1
   end
 
-  -- 代码里的块：只删开/闭标记（保留内容）
-  -- // 行注释里的内嵌块：整块删除（这类是"临时变体值"笔记，不是代码，
-  --   例：// for(i = 0/*i = 1*/; ...) → // for(i = 0; ...)）
+  -- 严格只删开/闭标记（连同一个格式空格），标记之间的内容一律原样保留，
+  -- 包括 // 行注释里内嵌的块（例：// for(i = 0/*i = 1*/; ...) → // for(i = 0i = 1; ...)）
   local removals = {}
   for _, b in ipairs(blocks) do
     local s_off = prefix[b.sl] + b.sc
     local btext = block_text(scan_data, b)
     local e_off = s_off + #btext
-    local lc = scan_data.line_comments[b.sl]
-    local inside_line_comment = b.sl == b.el and lc ~= nil and lc < b.sc
-    if inside_line_comment then
-      removals[#removals + 1] = { s_off, e_off } -- 整块删
-    else
-      local open_len = (btext:sub(1, 3) == "/* ") and 3 or 2
-      local close_len = (btext:sub(-3) == " */") and 3 or 2
-      removals[#removals + 1] = { s_off, s_off + open_len }
-      removals[#removals + 1] = { e_off - close_len, e_off }
-    end
+    local open_len = (btext:sub(1, 3) == "/* ") and 3 or 2
+    local close_len = (btext:sub(-3) == " */") and 3 or 2
+    removals[#removals + 1] = { s_off, s_off + open_len }
+    removals[#removals + 1] = { e_off - close_len, e_off }
   end
 
   -- 从后往前删，偏移保持有效
