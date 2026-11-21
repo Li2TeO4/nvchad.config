@@ -1,7 +1,7 @@
 -- C/C++ 专用注释操作：<leader>/、<leader>.、<leader>,
 --
 -- 设计说明（已与作者逐条确认）：
---   * 只对 c / cpp 生效，其它 filetype 全部回落到 Comment.nvim 原生行为
+--   * c / cpp 走 /* */ 专属逻辑；其它 filetype 用「通用行注释开关」（按 commentstring，自带实现）
 --   * 核心是 /* */ 局部注释；// 整行注释保留，行尾 // 永不删除
 --   * <leader>/ 优先级：消本行所有 /* */  →  消整行 //  →  整行加 /* */
 --   * <leader>. 优先级：消光标处 /* */  →  消本行所有 /* */  →  恢复上次删的 /* */
@@ -26,12 +26,138 @@ local function notify(msg, level)
   vim.notify(msg, level or vim.log.levels.INFO)
 end
 
--- 非 c/cpp：保持原行为（整行 // toggle）
-local function fallback_toggle()
-  local ok, api = pcall(require, "Comment.api")
-  if ok then
-    api.toggle.linewise.current()
+-- ── 非 C/C++：通用行注释开关（自带实现，不依赖 Comment.nvim）──
+-- 用 'commentstring' 拆出左右标记，逐行在行首加/删注释标记。
+-- 例：python '# %s' → '# code'；lua '-- %s' → '-- code'；html '<!-- %s -->' → '<!-- code -->'
+
+-- nvim 只给少数 filetype 设了 commentstring（c/cs/d/arduino…），其余在这里兜底
+local COMMENTSTRING = {
+  lua = "-- %s",
+  python = "# %s",
+  pyi = "# %s",
+  sh = "# %s",
+  bash = "# %s",
+  zsh = "# %s",
+  fish = "# %s",
+  markdown = "<!-- %s -->",
+  html = "<!-- %s -->",
+  xml = "<!-- %s -->",
+  css = "/* %s */",
+  scss = "// %s",
+  javascript = "// %s",
+  javascriptreact = "// %s",
+  typescript = "// %s",
+  typescriptreact = "// %s",
+  yaml = "# %s",
+  toml = "# %s",
+  ini = "; %s",
+  conf = "# %s",
+  vim = '" %s',
+  dosbatch = "REM %s",
+}
+
+-- 取当前 buffer 的注释标记：left / right（都已去掉贴边的空格）
+local function comment_parts()
+  local cs = vim.bo.commentstring
+  if not cs or cs == "" or cs == "%s" then
+    local ft = vim.bo.filetype
+    if ft ~= "" then
+      local ok, val = pcall(vim.filetype.get_option, ft, "commentstring")
+      if ok and type(val) == "string" and val ~= "" and val ~= "%s" then
+        cs = val
+      end
+    end
   end
+  if not cs or cs == "" or cs == "%s" then
+    cs = COMMENTSTRING[vim.bo.filetype]
+  end
+  if not cs or cs == "" then
+    return nil
+  end
+  local left, right = cs:match "^(.-)%%s(.-)$"
+  if not left or left == "" then
+    return nil
+  end
+  return (left:gsub("%s+$", "")), (right:gsub("^%s+", ""))
+end
+
+-- 该行已被注释则返回去掉标记后的内容，否则返回 nil
+local function strip_comment(line, left, right)
+  local indent, body = line:match "^(%s*)(.*)$"
+  if body:sub(1, #left) ~= left then
+    return nil
+  end
+  body = body:sub(#left + 1)
+  if right ~= "" then
+    if body:sub(-#right) ~= right then
+      return nil
+    end
+    body = body:sub(1, #body - #right)
+  end
+  body = body:gsub("^%s", "") -- 去掉标记后的一个空格
+  if right ~= "" then
+    body = body:gsub("%s$", "")
+  end
+  return indent .. body
+end
+
+-- 给一行加注释
+local function add_comment(line, left, right)
+  local indent, body = line:match "^(%s*)(.*)$"
+  local tail = right ~= "" and (" " .. right) or ""
+  if body == "" then
+    return indent .. left .. tail
+  end
+  return indent .. left .. " " .. body .. tail
+end
+
+-- 逐行开关：全部已注释 → 全去；否则只给未注释的行加（空行跳过）
+local function toggle_lines(first, last)
+  local buf = vim.api.nvim_get_current_buf()
+  local lines = vim.api.nvim_buf_get_lines(buf, first - 1, last, false)
+  local left, right = comment_parts()
+  if not left then
+    notify("无法确定该文件类型的注释格式（commentstring 为空）", vim.log.levels.WARN)
+    return
+  end
+
+  local all_commented = #lines > 0
+  for _, line in ipairs(lines) do
+    -- 空行不参与「是否已全部注释」的判定
+    if not line:match "^%s*$" and not strip_comment(line, left, right) then
+      all_commented = false
+      break
+    end
+  end
+
+  local out = {}
+  for _, line in ipairs(lines) do
+    if line:match "^%s*$" then
+      out[#out + 1] = line
+    elseif all_commented then
+      out[#out + 1] = strip_comment(line, left, right) or line
+    else
+      out[#out + 1] = strip_comment(line, left, right) and line or add_comment(line, left, right)
+    end
+  end
+  vim.api.nvim_buf_set_lines(buf, first - 1, last, false, out)
+end
+
+-- normal 模式：当前行
+local function generic_normal()
+  local lnum = vim.api.nvim_win_get_cursor(0)[1]
+  toggle_lines(lnum, lnum)
+end
+
+-- visual 模式：选中行（选区行号，已排序/夹紧）
+local function generic_visual(sl, el)
+  if sl > el then
+    sl, el = el, sl
+  end
+  local n = vim.api.nvim_buf_line_count(0)
+  sl = math.max(1, math.min(sl, n))
+  el = math.max(1, math.min(el, n))
+  toggle_lines(sl, el)
 end
 
 --------------------------------------------------------------------------------
@@ -355,7 +481,7 @@ end
 -- normal <leader>/
 function M.slash_normal()
   if not c_like() then
-    return fallback_toggle()
+    return generic_normal()
   end
   local bufnr = vim.api.nvim_get_current_buf()
   local lnum = vim.api.nvim_win_get_cursor(0)[1]
@@ -388,7 +514,7 @@ end
 -- normal <leader>.
 function M.dot_normal()
   if not c_like() then
-    return fallback_toggle()
+    return generic_normal()
   end
   local bufnr = vim.api.nvim_get_current_buf()
   local lnum = vim.api.nvim_win_get_cursor(0)[1]
@@ -470,13 +596,13 @@ local function per_line_range(line, lnum, sl, sc, el, ec, mode)
 end
 
 function M.visual()
-  if not c_like() then
-    return fallback_toggle()
-  end
   local mode, sl, sc, el, ec = visual_capture()
   if mode ~= "v" and mode ~= "V" then
     notify("暂不支持块选区（<C-v>）", vim.log.levels.WARN)
     return
+  end
+  if not c_like() then
+    return generic_visual(sl, el)
   end
 
   local bufnr = vim.api.nvim_get_current_buf()
@@ -555,7 +681,7 @@ end
 
 function M.line_comment_normal()
   if not c_like() then
-    return fallback_toggle()
+    return generic_normal()
   end
   local bufnr = vim.api.nvim_get_current_buf()
   local lnum = vim.api.nvim_win_get_cursor(0)[1]
@@ -564,10 +690,10 @@ function M.line_comment_normal()
 end
 
 function M.line_comment_visual()
-  if not c_like() then
-    return fallback_toggle()
-  end
   local _mode, sl, sc, el, ec = visual_capture()
+  if not c_like() then
+    return generic_visual(sl, el)
+  end
   local bufnr = vim.api.nvim_get_current_buf()
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   if sl > el then

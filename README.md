@@ -100,7 +100,19 @@ lua/configs/lazy.lua      lazy 性能设置（禁用 netrw 等内置插件）
 
 ### 注释（C/C++ 专用 `/* */`，其余语言保持原样）
 
-`<leader>/`、`<leader>.`、`<leader>,` 三者只在 `c` / `cpp` 文件里启用；其它 filetype（lua、py、md…）自动回落到 Comment.nvim 的原生行为（`// `、`-- ` 等）。
+`<leader>/`、`<leader>.`、`<leader>,` 在 **`c` / `cpp`** 里走下面的 `/* */` 专属逻辑；
+**其它语言**统一走「通用行注释开关」——按 `commentstring` 在行首加/删注释标记，三个键行为一致：
+
+| 文件类型 | 加注释后的样子 |
+|---|---|
+| python / sh / bash / yaml / toml | `# code` |
+| lua | `-- code` |
+| javascript / typescript / scss | `// code` |
+| markdown / html / xml | `<!-- code -->` |
+| css | `/* code */` |
+
+- **n 模式**：切换当前行；**v 模式**：切换选中行（全都有则全去，否则只给没注释的行加；空行跳过）
+- `commentstring` 取不到时会弹出提示（不再静默失败）
 
 | 键 | 模式 | 行为 |
 |---|---|---|
