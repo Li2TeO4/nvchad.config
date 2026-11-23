@@ -48,9 +48,15 @@ local function wrap_text(text, width)
   return out
 end
 
+-- 规范化一条消息：prefix 与正文之间留一个空格（NvChad 的 prefix 是图标且没带空格，
+-- 直接拼会糊在第一个字母上），并去掉消息自带的换行/首尾空白。
 local function message_of(diag, opts)
-  local msg = (diag.message or ""):gsub("%s*\n%s*", " ")
-  return (opts.prefix or "") .. msg .. (opts.suffix or "")
+  local prefix = (opts.prefix or ""):gsub("%s+$", "")
+  local suffix = (opts.suffix or ""):gsub("^%s+", "")
+  local msg = (diag.message or ""):gsub("%s*\n%s*", " "):gsub("^%s+", ""):gsub("%s+$", "")
+  local sep = prefix ~= "" and " " or ""
+  local indent = prefix ~= "" and (vim.fn.strdisplaywidth(prefix) + 1) or 0
+  return prefix .. sep .. msg .. (suffix ~= "" and (" " .. suffix) or ""), indent
 end
 
 -- 渲染：行尾放不下就走 virt_lines
@@ -95,9 +101,13 @@ local function render(namespace, bufnr, diagnostics, opts)
         -- 放不下：在代码行下方换行显示（每条诊断按窗口宽度折行）
         local virt_lines = {}
         for _, d in ipairs(show) do
-          local msg = message_of(d, opts)
-          for _, piece in ipairs(wrap_text(msg, avail - 2)) do
-            virt_lines[#virt_lines + 1] = { { piece, hl_of(d) } }
+          local msg, indent = message_of(d, opts)
+          indent = indent or 0
+          local pieces = wrap_text(msg, avail - 2)
+          for i, piece in ipairs(pieces) do
+            -- 续行缩进对齐到正文（不顶到窗口最左边）
+            local lead = i > 1 and string.rep(" ", indent) or ""
+            virt_lines[#virt_lines + 1] = { { lead .. piece, hl_of(d) } }
           end
         end
         pcall(vim.api.nvim_buf_set_extmark, bufnr, namespace, line, 0, {
