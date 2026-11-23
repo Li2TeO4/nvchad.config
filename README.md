@@ -246,6 +246,13 @@ int data;   （visual 选 " data"）     // <leader>/ → int/* data*/;  → 再
 | `<leader>H` | 开关 harper_ls（Markdown 语法/文风检查） |
 | `<leader>ls` | 静音诊断提示：隐藏黄(WARN)/紫(HINT)/绿(INFO)的行内文字、下划线与行号旁图标，只留红色 ERROR；**LSP 服务不受影响**，再按一次恢复 |
 
+**诊断消息的显示方式（长行不丢内容）**：由 `lua/configs/diagnostics.lua` 接管渲染 ——
+
+- 行尾**放得下** → 照旧显示在代码行尾（与默认行为一致）
+- 行**太长放不下** → 自动在代码行**下方换行显示**（按窗口宽度折行，不会被右侧裁掉）
+- 窗口尺寸变化时会自动重新计算（`WinResized` / `VimResized`）
+- `<leader>ls` 的静音对两者都生效
+
 > ⚠ NvChad v2.5 没有绑定 `K`（悬浮文档）、`gr`（引用）、`gi`（实现）。
 > 需要时自行映射或在命令里用：
 > `:lua vim.lsp.buf.hover()` / `vim.lsp.buf.references()` / `vim.lsp.buf.implementation()`。

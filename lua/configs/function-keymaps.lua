@@ -133,19 +133,19 @@ local function toggle_diagnostic_display()
   if not diag_quiet then
     local cur = vim.diagnostic.config() or {}
     diag_saved = {
-      virtual_text = cur.virtual_text,
+      wrapped_virtual_text = cur.wrapped_virtual_text,
       signs = cur.signs,
       underline = cur.underline,
     }
     vim.diagnostic.config({
-      virtual_text = with_min_severity(diag_saved.virtual_text, x.ERROR),
+      wrapped_virtual_text = with_min_severity(diag_saved.wrapped_virtual_text, x.ERROR),
       signs = with_min_severity(diag_saved.signs, x.ERROR),
       underline = with_min_severity(diag_saved.underline, x.ERROR),
     })
     vim.notify("已静音诊断提示：只保留红色 ERROR（LSP 服务照常运行）", vim.log.levels.INFO)
   else
     vim.diagnostic.config({
-      virtual_text = diag_saved.virtual_text,
+      wrapped_virtual_text = diag_saved.wrapped_virtual_text,
       signs = diag_saved.signs,
       underline = diag_saved.underline,
     })

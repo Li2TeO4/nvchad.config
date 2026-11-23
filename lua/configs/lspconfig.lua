@@ -1,5 +1,8 @@
 require("nvchad.configs.lspconfig").defaults()
 
+-- 诊断渲染：行尾放得下就照旧 inline，放不下就在代码行下方换行显示（不会被行宽裁掉）
+require("configs.diagnostics").setup()
+
 -- 使用 Neovim 0.11+ 的 vim.lsp.enable 启动 LSP 服务器。
 --
 -- ⚠ 这里的名字必须是「lspconfig 的服务器名」，不是 Mason 的包名，写错不会报错，
